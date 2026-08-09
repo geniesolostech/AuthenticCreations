@@ -46,7 +46,7 @@ A custom e-commerce site for **Authentic Creations**, CJ Lavender's handmade cro
 | `/` | Hero (logo, tagline), featured products, story teaser, upcoming event teaser, latest posts |
 | `/shop/hats` | Product grid with price + sold-out badges |
 | `/shop/accessories` | Same, for accessories |
-| `/shop/[slug]` | Product detail: gallery, description, price, stock, Add to Cart; products with variations (crochet flowers: rose/tulip/lavender) show a variant picker |
+| `/shop/[section]/[slug]` | Product detail: gallery, description, price, stock, Add to Cart; products with variations (crochet flowers: rose/tulip/lavender) show a variant picker |
 | `/shop/hats/custom`, `/shop/accessories/custom` | Custom order flow (see §6) |
 | `/about` | CJ Lavender: photo, bio (artist, musician, therapist, creative), name meaning, mission. CMS-editable |
 | `/blog`, `/blog/[slug]` | Blog index + posts |
@@ -167,5 +167,5 @@ A custom e-commerce site for **Authentic Creations**, CJ Lavender's handmade cro
 4. Sanity account for CJ (free) once Studio is deployed.
 5. Real photos for: granny square beanie, cat-ear beanie, scrunchies, crochet flowers (anytime — placeholders until then).
 6. About/policies text (drafts will be provided for CJ to edit).
-7. Domain name choice + registration.
+7. Domain: **authenticcreationsco.com** (confirmed available via RDAP 2026-08-09; fallback authenticcreationscompany.com also available). Register at deploy time — availability isn't reserved until purchased.
 8. Who besides the developer needs AWS console access to view CloudWatch RUM analytics (CJ optional — sales analytics already in her Square dashboard).
