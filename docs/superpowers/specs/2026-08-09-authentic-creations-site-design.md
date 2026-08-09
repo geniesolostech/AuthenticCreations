@@ -29,6 +29,7 @@ A custom e-commerce site for **Authentic Creations**, CJ Lavender's handmade cro
 | Custom color choices | Classic 8: Black, White, Red, Orange, Yellow, Green, Blue, Purple |
 | Missing product photos | Branded placeholders at launch; CJ swaps real photos via dashboard |
 | Square catalog state | Partially set up — catalog completion is in scope (checklist below) |
+| Analytics | AWS CloudWatch RUM (~$1/mo) — traffic analytics viewed in the AWS console (developer-facing); Square's built-in reports cover sales analytics for CJ |
 
 ## 3. Brand & visual direction
 
@@ -125,8 +126,9 @@ A custom e-commerce site for **Authentic Creations**, CJ Lavender's handmade cro
 - **Environments:** Square Sandbox for all development and testing; production token swapped at launch.
 - **Images:** full-resolution photos from `images/full/` seeded into Sanity at setup; Sanity's image CDN serves responsive sizes. Placeholder images generated on-brand for unphotographed products.
 - **SEO:** per-page metadata, OpenGraph share images, sitemap.xml, robots.txt.
+- **Analytics:** Amazon CloudWatch RUM — app monitor + guest-access identity pool provisioned at setup, web client snippet in the root layout. Captures page views, sessions, geography, performance, JS errors; viewed in the AWS console (primarily by the developer, not CJ). Uses first-party session cookies → one-line cookie mention added to the policies page.
 
-**Estimated running cost:** ~$2–7/month after AWS free tier (~$0.50–1/month in year one) + ~$13/year domain + Square's 2.9% + $0.30 per sale. No fixed subscriptions.
+**Estimated running cost:** ~$3–8/month after AWS free tier (~$1–2/month in year one) including ~$1/mo CloudWatch RUM + ~$13/year domain + Square's 2.9% + $0.30 per sale. No fixed subscriptions.
 
 ## 9. Error handling & edge cases
 
@@ -156,7 +158,6 @@ A custom e-commerce site for **Authentic Creations**, CJ Lavender's handmade cro
 - User accounts of any kind
 - Newsletter/email marketing integration
 - Square webhooks (60s cache is fresh enough at this scale)
-- Analytics (can add later with a one-line script)
 
 ## 12. Open items (need CJ / owner input)
 
@@ -167,3 +168,4 @@ A custom e-commerce site for **Authentic Creations**, CJ Lavender's handmade cro
 5. Real photos for: granny square beanie, cat-ear beanie, scrunchies, crochet flowers (anytime — placeholders until then).
 6. About/policies text (drafts will be provided for CJ to edit).
 7. Domain name choice + registration.
+8. Who besides the developer needs AWS console access to view CloudWatch RUM analytics (CJ optional — sales analytics already in her Square dashboard).
