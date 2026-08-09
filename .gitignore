@@ -1,0 +1,15 @@
+# dependencies / build
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# env & secrets — never commit tokens
+.env*
+!.env.example
+
+# misc
+.DS_Store
+
+# SDD scratch workspace
+.superpowers/
