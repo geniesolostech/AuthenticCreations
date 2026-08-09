@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+/* Authentic Creations brand tokens — the single source of truth for
+   colors and fonts across the site. Do not hardcode hex values or font
+   stacks in components; use the generated Tailwind utilities instead
+   (bg-cream, text-charcoal, text-rust, font-heading, font-body,
+   font-script, etc.). */
+@theme {
+  --color-cream: #f7f1e5;
+  --color-linen: #efe6d4;
+  --color-rust: #c9622b;
+  --color-rust-soft: #e8894a;
+  --color-charcoal: #3a3734;
+  --color-khaki: #a98f68;
+  --color-olive: #6b7245;
+}
+
+/* Font tokens are aliased (not redeclared) from the CSS variables next/font
+   sets on <html> in app/layout.tsx, so `@theme inline` substitutes the
+   value directly into each utility instead of emitting a competing
+   `:root` declaration. */
+@theme inline {
+  --font-heading: var(--font-fraunces);
+  --font-body: var(--font-nunito-sans);
+  --font-script: var(--font-caveat);
+}

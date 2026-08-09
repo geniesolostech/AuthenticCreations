@@ -2,7 +2,10 @@
 node_modules/
 .next/
 out/
+build/
 *.tsbuildinfo
+next-env.d.ts
+coverage/
 
 # env & secrets — never commit tokens
 .env*
@@ -10,6 +13,9 @@ out/
 
 # misc
 .DS_Store
+*.pem
+npm-debug.log*
+.vercel
 
 # SDD scratch workspace
 .superpowers/
