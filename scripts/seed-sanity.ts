@@ -21,6 +21,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+// Relative, not the `@/` alias: this script runs under plain Node via tsx, not
+// through Next's or Vitest's resolver, so it should not depend on either
+// knowing about tsconfig paths. The module it pulls in is a lone string
+// constant with no imports of its own — see lib/sanity/api-version.ts for why
+// the version must not drift between this script and the app's clients.
+import { SANITY_API_VERSION } from '../lib/sanity/api-version';
+
 const DRY_RUN = process.argv.includes('--dry-run');
 
 // Best-effort .env.local load, so `npm run seed` picks up local credentials
@@ -261,7 +268,7 @@ async function runSeed(): Promise<void> {
   const client = createClient({
     projectId,
     dataset,
-    apiVersion: '2024-06-01',
+    apiVersion: SANITY_API_VERSION,
     useCdn: false,
     token,
   });
