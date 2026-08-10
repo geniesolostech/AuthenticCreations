@@ -30,6 +30,23 @@ const PORT = 3100;
  */
 const BASE_URL = `http://localhost:${PORT}`;
 
+/**
+ * A distinct client address per project, and it is load-bearing.
+ *
+ * `POST /api/rsvp` is rate-limited to 5 posts per caller per 10 minutes
+ * (lib/rate-limit.ts), counted in the dev server's memory — one server for the
+ * whole run. A browser talking to localhost sends no `x-forwarded-for`, so
+ * every request from every project lands in the single `unknown` bucket: the
+ * RSVP spec posts three times, so one project fits and two do not, and the
+ * second one's last assertion sees a 429 instead of the duplicate it asked
+ * about. Two real devices have two addresses; this says so, through exactly the
+ * header `clientIp` reads in production. Addresses from RFC 5737's
+ * documentation range, so they can never be anyone's.
+ */
+function forwardedFor(ip: string): Record<string, string> {
+  return { 'x-forwarded-for': ip };
+}
+
 export default defineConfig({
   testDir: './tests/e2e',
   // `*.spec.ts` here, `*.test.ts` for Vitest — see vitest.config.ts.
@@ -57,7 +74,17 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], extraHTTPHeaders: forwardedFor('203.0.113.10') },
+    },
+    // The audience for this shop is on a phone — the runbook's own smoke test
+    // says to walk it on one — and a mobile viewport is where a shop breaks
+    // differently: a sticky panel covering the buy button, a slide-over wider
+    // than the screen, a tap target under something else. Same specs, same
+    // fixture data, one browser binary (Pixel 5 is Chromium with a phone
+    // viewport, touch, and a mobile user agent).
+    {
+      name: 'mobile-chrome',
+      use: { ...devices['Pixel 5'], extraHTTPHeaders: forwardedFor('203.0.113.20') },
     },
   ],
 
