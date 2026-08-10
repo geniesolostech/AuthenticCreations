@@ -410,6 +410,15 @@ npx playwright install chromium
 > `DEBUG=pw:webserver npm run test:e2e` shows the gap between "Terminating the
 > WebServer" and "Terminated the WebServer" if you want to confirm it. See the
 > note in `playwright.config.ts` for what has already been ruled out.
+>
+> If you are waiting on it, killing the server unblocks Playwright immediately
+> and it then reports and exits normally:
+>
+> ```powershell
+> $p = Get-CimInstance Win32_Process -Filter "Name='node.exe'" |
+>   Where-Object { $_.CommandLine -like '*next/dist/bin/next dev*' }
+> taskkill /PID $p.ProcessId /T /F
+> ```
 
 ### 7.2 The Square Sandbox integration test
 

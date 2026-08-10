@@ -77,9 +77,11 @@ export default defineConfig({
     // decided; it is not a hung suite. Measured to be unaffected by
     // `gracefulShutdown` (either signal, any timeout), by the `stdout`/`stderr`
     // settings, and by the bundler (`--webpack` stalls identically), so there is
-    // nothing to tune here. A manual `taskkill /PID <pid> /T /F` on the server
-    // is instant, so if this ever becomes intolerable the escape hatch is to
-    // drop `webServer` and have the npm script own the server's lifecycle.
+    // nothing to tune here. A `taskkill /PID <server pid> /T /F` from another
+    // shell unblocks it instantly and Playwright then reports and exits
+    // normally — so if this ever becomes intolerable, the escape hatch is to
+    // drop `webServer` and have the npm script own the server's lifecycle
+    // (`start-server-and-test` kills it the same way). See the runbook.
     command: `node ./node_modules/next/dist/bin/next dev --port ${PORT}`,
     url: BASE_URL,
     // Never reuse: a server started without these env vars would serve real
