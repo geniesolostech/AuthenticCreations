@@ -17,6 +17,8 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
 });
 
 describe('makeRateLimiter — the quota', () => {
@@ -195,5 +197,37 @@ describe('clientIp', () => {
     expect(clientIp(request({}))).toBe('unknown');
     expect(clientIp(request({ 'x-forwarded-for': '' }))).toBe('unknown');
     expect(clientIp(request({ 'x-forwarded-for': '   ,10.0.0.5' }))).toBe('unknown');
+  });
+
+  it('says so in production, because the shared bucket is a misconfiguration there', () => {
+    // Behind Amplify/CloudFront this header is always present. If it is not,
+    // every RSVP in the world shares one 5-per-10-minutes budget — the form
+    // simply stops working for everyone once any one visitor has used it up,
+    // and nothing else in the system would ever say why.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.stubEnv('NODE_ENV', 'production');
+
+    expect(clientIp(request({}))).toBe('unknown');
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0][0])).toMatch(/x-forwarded-for/i);
+  });
+
+  it('stays quiet outside production, where a direct request is normal', () => {
+    // `next dev` and every test call this with no proxy in front of them.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect(clientIp(request({}))).toBe('unknown');
+
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('says nothing at all when the header is there', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.stubEnv('NODE_ENV', 'production');
+
+    clientIp(request({ 'x-forwarded-for': '203.0.113.7' }));
+
+    expect(warn).not.toHaveBeenCalled();
   });
 });

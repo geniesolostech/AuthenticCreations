@@ -42,7 +42,43 @@ function assertSiteUrl(): void {
   }
 }
 
+/**
+ * Build-time pre-flight for `NEXT_PUBLIC_SANITY_PROJECT_ID`.
+ *
+ * Without it, `lib/sanity/client.ts` substitutes the literal `'placeholder'` so
+ * the client can be constructed at import time — which means the build
+ * *succeeds*, every page renders, and every query comes back empty. The result
+ * is a site with no products, no posts and no circles in it: a shell that looks
+ * deliberate, with nothing anywhere to say a variable is missing. Failing the
+ * build is the only moment anyone finds out.
+ *
+ * Production only, for the same reason as the site-URL check above: local
+ * development runs on fixtures with no Sanity project at all.
+ */
+function assertSanityProjectId(): void {
+  if (process.env.NODE_ENV !== "production") return;
+
+  const raw = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID?.trim();
+  const advice =
+    "Set it to the Sanity project id printed by `npx sanity init` (a short string like " +
+    "abc12xyz) in the Amplify console under App settings → Environment variables, then " +
+    "redeploy. It must be present at BUILD time, not just at runtime. " +
+    "See docs/launch-runbook.md → pre-flight checklist.";
+
+  if (!raw) {
+    throw new Error(`NEXT_PUBLIC_SANITY_PROJECT_ID is not set. ${advice}`);
+  }
+
+  if (raw === "placeholder") {
+    throw new Error(
+      `NEXT_PUBLIC_SANITY_PROJECT_ID is still "placeholder", the stand-in lib/sanity/client.ts ` +
+        `falls back to. No such project exists, so the site would deploy completely empty. ${advice}`,
+    );
+  }
+}
+
 assertSiteUrl();
+assertSanityProjectId();
 
 const nextConfig: NextConfig = {
   /* config options here */

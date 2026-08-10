@@ -149,5 +149,22 @@ export function _resetRsvpRateLimiterForTests(): void {
 export function clientIp(request: Request): string {
   const forwarded = request.headers.get('x-forwarded-for');
   const first = forwarded?.split(',')[0]?.trim();
-  return first ? first : 'unknown';
+  if (first) return first;
+
+  // In production this header is always there — Amplify/CloudFront sets it — so
+  // reaching here means it is not being forwarded, and *every* visitor in the
+  // world is now sharing one 5-per-10-minutes budget. The symptom is an RSVP
+  // form that simply stops accepting anyone once one person has used the quota
+  // up, and nothing else in the system would ever explain why. Say it out loud.
+  //
+  // Not warned in dev or test, where a request with no proxy in front of it is
+  // the normal case and this would be noise on every call.
+  if (process.env.NODE_ENV === 'production') {
+    console.warn(
+      '[rate-limit] no x-forwarded-for on this request; every caller is sharing the ' +
+        '"unknown" bucket. Check that the CDN/proxy in front of the app forwards it — ' +
+        'see docs/launch-runbook.md §9.',
+    );
+  }
+  return 'unknown';
 }
