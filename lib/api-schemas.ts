@@ -11,7 +11,7 @@
  */
 import { z } from 'zod';
 
-import { CUSTOM_COLORS, CUSTOM_COMMENTS_MAX } from '@/lib/constants';
+import { CUSTOM_COLORS, CUSTOM_COMMENTS_MAX, MAX_CART_LINES } from '@/lib/constants';
 
 /** Upper bound on ids per inventory request — one storefront page's worth. */
 export const MAX_INVENTORY_IDS = 50;
@@ -43,9 +43,13 @@ export const cartLineSchema = z.object({
     .optional(),
 });
 
-/** Body of `POST /api/checkout`. An empty cart is not a checkout. */
+/**
+ * Body of `POST /api/checkout`. An empty cart is not a checkout, and a cart
+ * bigger than `MAX_CART_LINES` is not a cart — the ceiling keeps an anonymous
+ * caller from choosing how much work this endpoint does.
+ */
 export const checkoutBodySchema = z.object({
-  lines: z.array(cartLineSchema).min(1),
+  lines: z.array(cartLineSchema).min(1).max(MAX_CART_LINES),
 });
 
 export type CheckoutBody = z.infer<typeof checkoutBodySchema>;

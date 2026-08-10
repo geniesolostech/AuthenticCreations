@@ -46,6 +46,16 @@ function customLine(overrides: Record<string, unknown> = {}): Record<string, unk
   });
 }
 
+/**
+ * `count` distinct lines of the made-to-order variation, which is untracked and
+ * so can never be sold out — the only thing under test is the line count.
+ */
+function manyLines(count: number): Record<string, unknown>[] {
+  return Array.from({ length: count }, (_, i) =>
+    line({ lineId: `line-${i}`, variationId: 'var-custom', unitAmount: 6000 }),
+  );
+}
+
 let gw: FakeGateway;
 
 beforeEach(() => {
@@ -84,6 +94,13 @@ describe('POST /api/checkout — happy path', () => {
     expect(gw.calls.createPaymentLink[0]?.lineItems[0]?.quantity).toBe(10);
   });
 
+  it('accepts a cart of exactly 50 lines', async () => {
+    const response = await POST(post({ lines: manyLines(50) }));
+
+    expect(response.status).toBe(200);
+    expect(gw.calls.createPaymentLink[0]?.lineItems).toHaveLength(50);
+  });
+
   it('strips unknown fields instead of forwarding them to Square', async () => {
     const response = await POST(
       post({
@@ -116,6 +133,7 @@ describe('POST /api/checkout — 400 invalid body', () => {
     ['a missing lines key', {}],
     ['an empty lines array', { lines: [] }],
     ['lines that is not an array', { lines: 'var-ready' }],
+    ['51 lines', { lines: manyLines(51) }],
     ['a null body', null],
     ['a top-level array', [line()]],
     ['a line missing variationId', { lines: [line({ variationId: undefined })] }],
