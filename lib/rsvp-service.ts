@@ -9,6 +9,8 @@
  * only place in the app that writes an rsvp document.
  */
 
+import { hasStarted } from '@/lib/events';
+
 /** Every way an RSVP attempt can end. The route maps these to HTTP statuses. */
 export type RsvpResult = 'CREATED' | 'DUPLICATE' | 'FULL' | 'PAST' | 'NOT_FOUND' | 'INVALID';
 
@@ -48,13 +50,29 @@ export const RSVP_EMAIL_MAX = 254;
  */
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/**
+ * The two field rules, exported so `<RsvpForm>` can say *which* field the API
+ * turned down without keeping a second, drifting copy of them. Both take raw
+ * input and trim it themselves — leading spaces are a typo, not a rejection.
+ *
+ * This module imports nothing, so a Client Component can pull these in freely.
+ */
+export function isValidRsvpName(name: string): boolean {
+  const trimmed = name.trim();
+  return trimmed.length > 0 && trimmed.length <= RSVP_NAME_MAX;
+}
+
+export function isValidRsvpEmail(email: string): boolean {
+  const trimmed = email.trim();
+  return trimmed.length <= RSVP_EMAIL_MAX && EMAIL_PATTERN.test(trimmed);
+}
+
 export async function submitRsvp(input: RsvpInput, deps: RsvpDeps): Promise<RsvpResult> {
   const name = input.name.trim();
   const email = input.email.trim();
 
   // Shape first: a malformed request never becomes a Sanity round-trip.
-  if (name.length === 0 || name.length > RSVP_NAME_MAX) return 'INVALID';
-  if (email.length > RSVP_EMAIL_MAX || !EMAIL_PATTERN.test(email)) return 'INVALID';
+  if (!isValidRsvpName(name) || !isValidRsvpEmail(email)) return 'INVALID';
 
   const event = await deps.getEvent(input.eventSlug);
   if (event === null) return 'NOT_FOUND';
@@ -72,18 +90,4 @@ export async function submitRsvp(input: RsvpInput, deps: RsvpDeps): Promise<Rsvp
 
   await deps.create({ eventId: event._id, name, email });
   return 'CREATED';
-}
-
-/**
- * A circle is joinable right up to its start instant — the same boundary
- * `UPCOMING_EVENTS_QUERY` draws with `startsAt >= $now`, so an event listed as
- * upcoming is never one the API refuses as past.
- *
- * An unparseable `startsAt` counts as started: a date we cannot read is not a
- * date we can promise someone a seat for.
- */
-function hasStarted(startsAt: string, now: Date): boolean {
-  const start = new Date(startsAt).getTime();
-  if (Number.isNaN(start)) return true;
-  return start < now.getTime();
 }

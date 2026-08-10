@@ -14,6 +14,47 @@ const LONG_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', { dateStyle: 'long'
  * ISO string's own date component keeps the printed date identical for
  * every viewer, everywhere — no off-by-one across timezones.
  */
+/**
+ * Formats an event's `startsAt` as date **and** time — e.g.
+ * "August 20, 2026 at 7:00 PM" — in the *viewer's own* timezone.
+ *
+ * Deliberately the opposite choice from `formatPostDate`: a circle is a live
+ * call, so "when do I need to be there, my time" is the only useful reading of
+ * that instant. A publish date is a fact about a post and must look the same
+ * everywhere; a start time is an appointment and must not.
+ *
+ * The formatter is built per call rather than once at module load: it resolves
+ * the ambient timezone at construction, so a cached one would freeze whatever
+ * the process happened to be in (and quietly ignore a `TZ` change under test).
+ */
+export function formatEventDateTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+
+  return new Intl.DateTimeFormat('en-US', { dateStyle: 'long', timeStyle: 'short' }).format(date);
+}
+
+const UTC_DATE_TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  dateStyle: 'long',
+  timeStyle: 'short',
+  timeZone: 'UTC',
+});
+
+/**
+ * The same instant, spelled out in UTC and labelled as such.
+ *
+ * This is what a server render (and a visitor with JavaScript off) sees: the
+ * server's timezone is not the viewer's, so rendering *its* local time would be
+ * a confidently wrong appointment. `<EventDateTime>` swaps this for the local
+ * reading once it is running in the browser.
+ */
+export function formatEventDateTimeUtc(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+
+  return `${UTC_DATE_TIME_FORMATTER.format(date)} UTC`;
+}
+
 export function formatPostDate(iso: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
   if (!match) return '';
