@@ -108,11 +108,42 @@ Products are seeded with an **empty** `squareVariationId`. Filling those in is
 step 2.4, and until then the site shows "Price at checkout" with a disabled buy
 button, which is the correct behaviour for a product that cannot be sold yet.
 
+The About and Policies pages are seeded **with draft words in them**, not empty,
+so those pages are never a placeholder on a live site. They are drafts in CJ's
+voice and they are meant to be rewritten — put that in front of her in step 1.6.
+Nothing in them is a promise the site cannot keep, so it is safe if she takes a
+week to get to it.
+
+Two things the seed deliberately does **not** create: events and blog posts.
+Those are CJ's to write, and there is no sensible placeholder for either — hence
+step 1.7.
+
 ### 1.6 Invite CJ
 
 **Project** → **Members** → invite CJ as an **Editor**. She logs in at
 `/studio` on the live site with that account and needs nothing else — no AWS,
 no GitHub.
+
+Point her at **About** and **Policies** while she is in there: both are seeded
+drafts and both are hers to rewrite.
+
+### 1.7 Author one circle and one blog post
+
+Do this **before** the smoke test in §9, in Studio, with CJ if she is around:
+
+1. **Event** → create one — title, date/time in the future, a sentence of
+   description, and a capacity if she wants one. **Publish.**
+2. **Post** → create one — title, an excerpt, a `publishedAt` date, and a
+   paragraph or two of body. **Publish.**
+
+Neither is optional. `/community` and `/blog` are seeded with nothing, so
+without this the smoke test's step 8 has no circle to open and no way to
+exercise the RSVP write path at all — the site's only writer, and therefore the
+only thing that can be broken by a missing Sanity token, would go to production
+untested. Step 9 has nothing to look at either.
+
+A first real circle is also the best possible thing to have on the site the day
+it launches.
 
 ---
 
@@ -397,7 +428,13 @@ npm run test:e2e  # Playwright, against `next dev` on fixture data
 ```
 
 The E2E suite boots its own dev server with `SQUARE_FAKE=1 SANITY_FAKE=1`, so
-it needs no accounts. On a new machine, install the browser once:
+it needs no accounts. It runs every spec twice — once at a desktop viewport and
+once as a phone (`mobile-chrome`, a Pixel 5 profile), because that is what this
+audience uses. Both projects share the one dev server, so each is given its own
+`x-forwarded-for` address; without that they share the RSVP rate-limit bucket
+and the second one to run gets throttled mid-spec.
+
+On a new machine, install the browser once:
 
 ```bash
 npx playwright install chromium
@@ -462,22 +499,54 @@ Walk this before announcing the site.
 - [ ] **`SQUARE_ENVIRONMENT=production`** and the token is CJ's production one.
       A sandbox token in production takes orders that no one is ever charged
       for.
-- [ ] **Shipping.** `checkoutOptions.shippingFee` is deliberately **not set**
-      on payment links, pending CJ's decision on what to charge for postage.
-      Until it is decided, Square collects the buyer's address (the checkout
-      page asks for it) but adds no postage to the total, so shipping is
-      effectively free and comes out of the sale price. To change that, either
-      configure shipping in Square's own settings or set `shippingFee` in
-      `lib/square/gateway.ts` — the latter is a code change, so decide before
-      launch if the answer is "charge for it".
-- [ ] **Tax** is configured in Square's settings for CJ's location (see the
-      catalog checklist). The site never calculates tax.
+- [ ] **Shipping: the site adds no postage, and the only lever it has is a code
+      change.** `checkoutOptions.shippingFee` is deliberately unset, so Square
+      collects the buyer's address (the checkout page asks for it) and charges
+      exactly the sum of the item prices. Postage therefore comes out of the
+      sale price until someone changes that, and changing it means setting
+      `shippingFee` in `lib/square/gateway.ts` — **a code change, so decide
+      before launch if the answer is "charge for it".**
+
+      Ground-truthed against the Square **Sandbox** on 2026-08-10, because this
+      entry previously offered a dashboard route that nobody had ever walked.
+      A payment link created by this app's own gateway produced an order with
+      `total_money` = the item price, `total_service_charge_money` = 0, and a
+      single `SHIPMENT` fulfilment in state `PROPOSED` carrying no charge.
+      Square's hosted page *does* render a "Shipping method" section, so a
+      dashboard-side shipping option may well exist — but nothing observable
+      from the Sandbox makes it offer one (the sandbox link serves Square's
+      "Checkout API Sandbox Testing Panel" rather than a real checkout, and its
+      preview page says outright that it is "for visual purpose only"). Treat
+      the dashboard route as unproven until someone has watched a shipping
+      option appear on the live site; `shippingFee` is the route this repo
+      controls.
+- [ ] **Tax: assume nothing, and check it on the first real order.** The site
+      never calculates tax — that part is true and deliberate. What is *not*
+      established is whether Square adds one by itself: in the same Sandbox
+      experiment, an item carrying an **enabled, additive 8.5% catalog tax**
+      produced an order with `total_tax_money` = 0, its line item marked
+      `"taxable": true` and taxed nothing. So if CJ needs to charge tax, confirm
+      it on the real purchase in §9 step 7 **before announcing the site**, and
+      treat "Square handles it" as unproven until you have seen a tax line on a
+      live order.
+- [ ] **A rare oversell is possible, and the remedy is a refund.** Stock is
+      re-read from Square at the moment Checkout is pressed, but nothing *holds*
+      it: two buyers who press Checkout in the same second can both pass the
+      check on the last hat. A payment link also stays payable after it is
+      created — there is no webhook and no post-payment re-check in v1 — so a
+      link made while the hat existed can be paid an hour later, after it has
+      gone. Neither is prevented, and at this volume neither is likely.
+      If it happens: **refund the second order from the Square dashboard** and
+      email the buyer. Tell CJ this before launch, so the first time it happens
+      is not the first time she hears of it.
 - [ ] **Sold-out is driven by inventory counts, not Square's "sold out"
       toggle.** The site reads `IN_STOCK` counts and shows the badge at zero. It
       does **not** read the item-level availability toggle in the Square
       Dashboard, so switching that on hides nothing here. To take something off
-      sale: set its inventory to 0 (or untick "track inventory" and unpublish
-      the product in Studio). Tell CJ this explicitly — it is the single most
+      sale: set its inventory to 0, which stops any *new* checkout starting
+      (it cannot cancel a payment link already open in someone's browser — see
+      the oversell note above), or unpublish the product in Studio to take it
+      off the site altogether. Tell CJ this explicitly — it is the single most
       likely operational surprise.
 - [ ] **Made-to-order items have inventory tracking OFF** in Square. A tracked
       custom item at zero stock is unbuyable, which is the opposite of what
@@ -519,10 +588,31 @@ Do this on a phone, not only a laptop — most of this audience shops on one.
      line item** if you bought a custom piece;
    - the money appears in CJ's Square balance.
    Then refund it from the Square dashboard.
-8. `/community` → open a circle → RSVP with a real address → "You're in!", and
-   the RSVP appears in Studio under that event.
-9. `/blog`, `/about`, `/policies` all render CJ's content.
+8. `/community` → open **the circle authored in step 1.7** → RSVP with a real
+   address → "You're in!", and the RSVP appears in Studio under that event.
+   Nothing seeds an event, so with step 1.7 skipped there is no circle to open
+   and this step silently tests nothing — and it is the only exercise the site's
+   one *write* path ever gets before real visitors use it.
+9. `/blog` shows **the post from step 1.7**; `/about` and `/policies` render.
+   About and Policies arrive seeded with draft text, so they will show
+   *something* either way — read them and check they are CJ's words by now
+   rather than the seed's (step 1.5).
 10. `/studio` — CJ logs in and can edit.
+11. **RSVP throttle.** On one phone, submit the RSVP form six times in a row,
+    with a different email each time so nothing is refused as a duplicate. The
+    first five should be accepted; the sixth should answer *"that's a few tries
+    in a row — give it a couple of minutes and we'll try again"*. Then submit
+    once from a **different device** and confirm it goes straight through.
+
+    If the second device is throttled too, the client's address is not reaching
+    the app — `x-forwarded-for` is not being forwarded — and every visitor in
+    the world is sharing a single five-per-ten-minutes budget, which means one
+    person's sign-ups close the form for everyone. The function log says so
+    directly in that case: `[rate-limit] no x-forwarded-for`.
+
+    Delete the five test RSVPs from Studio afterwards, and mind the circle's
+    capacity while you do this — use a throwaway circle if the real one is
+    small.
 
 ---
 

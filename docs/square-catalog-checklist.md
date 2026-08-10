@@ -155,17 +155,20 @@ you**, and it's the one open question before launch:
 - **Free over a certain amount** — e.g. free over $50, otherwise a flat fee.
 
 Tell me which you'd like and roughly what the number is, and I'll set it up.
-It's a small change and it's better done before the first sale than after.
-
-To see the shipping options Square offers you: **Settings** → **Fulfilment**
-(or **Shipping**) in the dashboard.
+It's a small change on my side — a line in the site's code, not a switch in your
+dashboard — and it's better done before the first sale than after.
 
 ### Tax
 
-**Settings** → **Taxes** in the Square dashboard. Whatever you set there is
-what Square charges at checkout, and the website never touches it. If you're
-not sure whether you need to charge tax, that's a question for your accountant
-rather than for the site.
+**Settings** → **Taxes** in the Square dashboard is where a tax is set up, and
+the website never touches it either way.
+
+One honest caveat: when I tested this against Square's practice environment, a
+tax set up exactly that way did **not** appear on the order the website's
+checkout created. It may behave differently on a real account. So if you do need
+to charge tax, we check it together on the very first real order and sort it out
+then, rather than assuming. If you're not sure whether you need to charge tax at
+all, that's a question for your accountant rather than for the site.
 
 ---
 
@@ -229,7 +232,17 @@ go back and check it against the export.
 **To restock something:** update its inventory count in Square. The "Sold out"
 badge disappears from the site on its own within a minute.
 
-**To take something off sale:** set its inventory count to **0** in Square.
+**To take something off sale:** set its inventory count to **0** in Square. That
+stops anyone *starting* a new checkout for it within about a minute.
+
+> ⚠️ **Very occasionally, two people can buy the last one.** The website checks
+> the stock in Square the moment someone presses Checkout, but it can't put a
+> hold on it — so two people pressing Checkout in the same second can both get
+> through. And once someone is on the Square payment page, that page stays
+> payable: if they wander off and pay half an hour later, nobody re-checks.
+> It's unlikely at this size, and there's a simple fix when it happens: **refund
+> the second order from your Square dashboard** and send them a kind email. It's
+> worth knowing about before it happens rather than after.
 
 > ⚠️ There's a "sold out" toggle in the Square dashboard, and the website
 > **doesn't read it**. Flipping it will hide the item in your Square point of
@@ -253,8 +266,10 @@ website doesn't keep its own copy of anything to do with money.
 - [ ] 10 ready-made items, each with a price and inventory tracking **on**
 - [ ] Crochet flowers has three variations: rose, tulip, lavender
 - [ ] Custom items created, with inventory tracking **off**
-- [ ] Shipping decided and set up (or "free shipping" chosen deliberately)
-- [ ] Tax configured in Square's settings
+- [ ] Shipping decided (and told to me — it's a change on my side, not a switch
+      in your dashboard), or "free shipping" chosen deliberately
+- [ ] Tax configured in Square's settings, and checked together on the first
+      real order
 - [ ] Every variation ID pasted into the matching product on the website
 - [ ] Crochet flowers has its main variation ID left **empty**
 - [ ] Every product on the live shop page shows a real price

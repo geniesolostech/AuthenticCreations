@@ -182,6 +182,79 @@ function resolveImage(filename: string): { filename: string; absPath: string; ex
 }
 
 // ---------------------------------------------------------------------------
+// Starter copy for the two singletons.
+//
+// Seeded with words in them, not empty. An empty aboutPage and an absent
+// policiesPage body both render their "nothing here yet" fallbacks, which means
+// the launch smoke test's "/about and /policies render CJ's content" step has
+// nothing to look at and passes by showing placeholders. These are drafts in
+// CJ's voice for her to rewrite in Studio — complete and safe to be live as
+// they stand, with no blanks to fill in and no claim the site cannot keep.
+// ---------------------------------------------------------------------------
+
+interface Para {
+  style?: 'normal' | 'h2';
+  text: string;
+}
+
+/** Portable Text blocks with stable keys, so re-seeding produces the same document. */
+function portableText(prefix: string, paragraphs: Para[]) {
+  return paragraphs.map((paragraph, index) => ({
+    _type: 'block' as const,
+    _key: `${prefix}-${index}`,
+    style: paragraph.style ?? 'normal',
+    markDefs: [],
+    children: [
+      { _type: 'span' as const, _key: `${prefix}-${index}-0`, text: paragraph.text, marks: [] },
+    ],
+  }));
+}
+
+const ABOUT_BODY = portableText('about', [
+  {
+    text:
+      "Hi — I'm CJ Lavender. I'm an artist, a musician and a therapist, and every one " +
+      'of those turns up in the crochet: the colour sense, the rhythm of the stitches, ' +
+      'and the belief that what you wear can help you feel like yourself.',
+  },
+  {
+    text:
+      'Everything here is made by hand, one piece at a time. That is where the name ' +
+      'comes from — nothing is mass-produced, nothing is a copy, and no two pieces come ' +
+      'out quite the same. If you order a custom piece, it is made for you and nobody else.',
+  },
+  {
+    text:
+      'What I want most is for the things you wear to sound like you rather than like ' +
+      'everyone else. Find you in whatever you do.',
+  },
+]);
+
+const POLICIES_BODY = portableText('policies', [
+  { style: 'h2', text: 'Shipping' },
+  {
+    text:
+      'Every piece is made and posted by hand. Ready-made pieces usually go out within ' +
+      'a few days. Made-to-order pieces take longer, because they are started once you ' +
+      "order them — I'll email you when yours is on its way. You'll be asked for a " +
+      'delivery address at checkout.',
+  },
+  { style: 'h2', text: 'Returns' },
+  {
+    text:
+      "If something arrives damaged, or isn't what you ordered, email me within 14 days " +
+      'and I will put it right. Custom pieces are made for one person, so I can only take ' +
+      'those back if there is a fault.',
+  },
+  { style: 'h2', text: 'Questions' },
+  {
+    text:
+      'There is a person on the other end of this — me. If anything is unclear, or you ' +
+      'need something by a particular date, just ask before you order.',
+  },
+]);
+
+// ---------------------------------------------------------------------------
 // Dry run — no Sanity client is ever constructed, no network access.
 // ---------------------------------------------------------------------------
 
@@ -224,6 +297,7 @@ function runDryRun(): void {
         photo: aboutPhoto.exists
           ? `<upload:${aboutPhoto.filename}>`
           : '(cj-portrait.jpg not found — left unset; CJ can upload it in Studio later)',
+        body: ABOUT_BODY,
       },
       null,
       2
@@ -232,7 +306,9 @@ function runDryRun(): void {
   console.log('');
 
   console.log('createIfNotExists singleton: policiesPage');
-  console.log(JSON.stringify({ _id: 'policiesPage', _type: 'policiesPage' }, null, 2));
+  console.log(
+    JSON.stringify({ _id: 'policiesPage', _type: 'policiesPage', body: POLICIES_BODY }, null, 2)
+  );
   console.log('');
 
   const photoCount = PRODUCTS.filter((p) => (p.photos ?? []).length > 0).length;
@@ -325,6 +401,7 @@ async function runSeed(): Promise<void> {
       _id: 'aboutPage',
       _type: 'aboutPage',
       heading: 'Meet CJ',
+      body: ABOUT_BODY,
       ...(photo ? { photo } : {}),
     });
     console.log(`created: aboutPage${photo ? '' : ' (no photo — cj-portrait.jpg not found)'}`);
@@ -333,7 +410,11 @@ async function runSeed(): Promise<void> {
   if (await exists('policiesPage')) {
     console.log('skip (exists): policiesPage');
   } else {
-    await client.createIfNotExists({ _id: 'policiesPage', _type: 'policiesPage' });
+    await client.createIfNotExists({
+      _id: 'policiesPage',
+      _type: 'policiesPage',
+      body: POLICIES_BODY,
+    });
     console.log('created: policiesPage');
   }
 
