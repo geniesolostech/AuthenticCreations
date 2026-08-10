@@ -1,0 +1,208 @@
+import type { Section } from '@/lib/types';
+
+import { sanityClient } from './client';
+
+// ---------------------------------------------------------------------------
+// Result types
+// ---------------------------------------------------------------------------
+
+export interface SanityImage {
+  asset?: { _ref: string; _type: 'reference' };
+  [key: string]: unknown;
+}
+
+/** Portable Text block or inline image, kept loosely typed here — rendering
+ * (Task 9's <RichText>) owns the strict shape. */
+export type PortableTextBlock = { _type: string; [key: string]: unknown };
+
+export interface ProductVariant {
+  label: string;
+  squareVariationId: string;
+}
+
+export interface Product {
+  _id: string;
+  title: string;
+  slug: string;
+  section: Section;
+  description?: string;
+  photos?: SanityImage[];
+  squareVariationId?: string;
+  customSquareVariationId?: string;
+  variants?: ProductVariant[];
+  displayOrder?: number;
+  featured?: boolean;
+}
+
+export interface PostSummary {
+  _id: string;
+  title: string;
+  slug: string;
+  coverImage?: SanityImage;
+  excerpt?: string;
+  publishedAt?: string;
+}
+
+export interface Post extends PostSummary {
+  body?: PortableTextBlock[];
+}
+
+export interface EventDoc {
+  _id: string;
+  title: string;
+  slug: string;
+  startsAt: string;
+  description?: string;
+  capacity?: number;
+}
+
+export interface Rsvp {
+  _id: string;
+  event: { _ref: string };
+  name: string;
+  email: string;
+  createdAt: string;
+}
+
+export interface AboutPage {
+  heading?: string;
+  photo?: SanityImage;
+  body?: PortableTextBlock[];
+}
+
+export interface PoliciesPage {
+  body?: PortableTextBlock[];
+}
+
+// ---------------------------------------------------------------------------
+// GROQ query strings — exported so they can be unit-tested without a
+// network call (see tests/unit/queries.test.ts).
+// ---------------------------------------------------------------------------
+
+const PRODUCT_PROJECTION = `{
+  _id,
+  title,
+  "slug": slug.current,
+  section,
+  description,
+  photos,
+  squareVariationId,
+  customSquareVariationId,
+  variants,
+  displayOrder,
+  featured
+}`;
+
+export const PRODUCTS_QUERY = `*[_type == "product" && section == $section] | order(displayOrder asc) ${PRODUCT_PROJECTION}`;
+
+export const PRODUCT_QUERY = `*[_type == "product" && slug.current == $slug][0] ${PRODUCT_PROJECTION}`;
+
+export const FEATURED_PRODUCTS_QUERY = `*[_type == "product" && featured == true] | order(displayOrder asc) ${PRODUCT_PROJECTION}`;
+
+const POST_SUMMARY_PROJECTION = `{
+  _id,
+  title,
+  "slug": slug.current,
+  coverImage,
+  excerpt,
+  publishedAt
+}`;
+
+export const POSTS_QUERY = `*[_type == "post"] | order(publishedAt desc) ${POST_SUMMARY_PROJECTION}`;
+
+export const POST_QUERY = `*[_type == "post" && slug.current == $slug][0] {
+  _id,
+  title,
+  "slug": slug.current,
+  coverImage,
+  excerpt,
+  publishedAt,
+  body
+}`;
+
+const EVENT_PROJECTION = `{
+  _id,
+  title,
+  "slug": slug.current,
+  startsAt,
+  description,
+  capacity
+}`;
+
+export const UPCOMING_EVENTS_QUERY = `*[_type == "event" && startsAt >= $now] | order(startsAt asc) ${EVENT_PROJECTION}`;
+
+export const PAST_EVENTS_QUERY = `*[_type == "event" && startsAt < $now] | order(startsAt desc) ${EVENT_PROJECTION}`;
+
+export const EVENT_BY_SLUG_QUERY = `*[_type == "event" && slug.current == $slug][0] ${EVENT_PROJECTION}`;
+
+export const RSVP_COUNT_QUERY = `count(*[_type == "rsvp" && event._ref == $eventId])`;
+
+export const FIND_RSVP_QUERY = `*[_type == "rsvp" && event._ref == $eventId && lower(email) == lower($email)][0] {
+  _id,
+  event,
+  name,
+  email,
+  createdAt
+}`;
+
+export const ABOUT_PAGE_QUERY = `*[_type == "aboutPage"][0] {
+  heading,
+  photo,
+  body
+}`;
+
+export const POLICIES_PAGE_QUERY = `*[_type == "policiesPage"][0] {
+  body
+}`;
+
+// ---------------------------------------------------------------------------
+// Typed query helpers
+// ---------------------------------------------------------------------------
+
+export function getProducts(section: Section): Promise<Product[]> {
+  return sanityClient.fetch<Product[]>(PRODUCTS_QUERY, { section });
+}
+
+export function getProduct(slug: string): Promise<Product | null> {
+  return sanityClient.fetch<Product | null>(PRODUCT_QUERY, { slug });
+}
+
+export function getFeaturedProducts(): Promise<Product[]> {
+  return sanityClient.fetch<Product[]>(FEATURED_PRODUCTS_QUERY);
+}
+
+export function getPosts(): Promise<PostSummary[]> {
+  return sanityClient.fetch<PostSummary[]>(POSTS_QUERY);
+}
+
+export function getPost(slug: string): Promise<Post | null> {
+  return sanityClient.fetch<Post | null>(POST_QUERY, { slug });
+}
+
+export function getUpcomingEvents(now: Date): Promise<EventDoc[]> {
+  return sanityClient.fetch<EventDoc[]>(UPCOMING_EVENTS_QUERY, { now: now.toISOString() });
+}
+
+export function getPastEvents(now: Date): Promise<EventDoc[]> {
+  return sanityClient.fetch<EventDoc[]>(PAST_EVENTS_QUERY, { now: now.toISOString() });
+}
+
+export function getEventBySlug(slug: string): Promise<EventDoc | null> {
+  return sanityClient.fetch<EventDoc | null>(EVENT_BY_SLUG_QUERY, { slug });
+}
+
+export function getRsvpCount(eventId: string): Promise<number> {
+  return sanityClient.fetch<number>(RSVP_COUNT_QUERY, { eventId });
+}
+
+export function findRsvp(eventId: string, email: string): Promise<Rsvp | null> {
+  return sanityClient.fetch<Rsvp | null>(FIND_RSVP_QUERY, { eventId, email });
+}
+
+export function getAboutPage(): Promise<AboutPage | null> {
+  return sanityClient.fetch<AboutPage | null>(ABOUT_PAGE_QUERY);
+}
+
+export function getPoliciesPage(): Promise<PoliciesPage | null> {
+  return sanityClient.fetch<PoliciesPage | null>(POLICIES_PAGE_QUERY);
+}
