@@ -19,7 +19,8 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "sanity": "^6.9.1",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "square": "^45.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
