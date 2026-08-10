@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import CheckoutButton, { _resetCheckoutInFlightForTests } from '@/components/checkout-button';
 import { MAX_CART_LINES } from '@/lib/constants';
 import { assignLocation, reloadLocation } from '@/lib/navigate';
-import { makeLine, readCartLines, renderWithCart } from '@/tests/helpers/cart-render';
+import { makeLine, readCartLines, readStoredLines, renderWithCart } from '@/tests/helpers/cart-render';
 import type { CartLine } from '@/lib/types';
 
 // jsdom refuses to navigate, so the two navigations this component performs go
@@ -243,102 +243,76 @@ describe('CheckoutButton — 409 SOLD_OUT', () => {
 });
 
 describe('CheckoutButton — 409 PRICE_CHANGED', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
+  const priceChanged = (prices: Record<string, number>) => ({ error: 'PRICE_CHANGED', prices });
 
-  afterEach(() => {
-    vi.useRealTimers();
-  });
+  test('re-prices the cart from the server and says so, without reloading', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue(json(priceChanged({ 'var-1': 5000 }), 409));
 
-  test('asks the shopper to review, then reloads after a beat', async () => {
-    vi.spyOn(global, 'fetch').mockResolvedValue(json({ error: 'PRICE_CHANGED' }, 409));
-
-    renderWithCart(<CheckoutButton />, [makeLine()]);
+    renderWithCart(<CheckoutButton />, [makeLine({ variationId: 'var-1', unitAmount: 4500 })]);
     await clickCheckout();
 
-    expect(screen.getByRole('alert')).toHaveTextContent(/prices were updated — please review your cart/i);
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      /prices changed — the cart's been updated, take a look/i,
+    );
+    expect(readCartLines()[0].unitAmount).toBe(5000);
+    // A reload was the old remedy and it never worked: the stale price lives in
+    // localStorage, so the reloaded page restored it and asked again.
     expect(reloadLocation).not.toHaveBeenCalled();
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(2000);
-    });
-
-    expect(reloadLocation).toHaveBeenCalledTimes(1);
+    expect(checkoutButton()).toBeEnabled();
   });
 
-  test('the shopper can reload immediately instead of waiting', async () => {
-    vi.spyOn(global, 'fetch').mockResolvedValue(json({ error: 'PRICE_CHANGED' }, 409));
+  test('the corrected price survives a reload, because it is persisted', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue(json(priceChanged({ 'var-1': 5000 }), 409));
 
-    renderWithCart(<CheckoutButton />, [makeLine()]);
+    renderWithCart(<CheckoutButton />, [makeLine({ variationId: 'var-1', unitAmount: 4500 })]);
     await clickCheckout();
 
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /refresh now/i }));
-    });
-
-    expect(reloadLocation).toHaveBeenCalledTimes(1);
-
-    // The pending auto-reload must not fire a second navigation.
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(5000);
-    });
-    expect(reloadLocation).toHaveBeenCalledTimes(1);
+    expect(readStoredLines()[0].unitAmount).toBe(5000);
   });
 
-  test('a second PRICE_CHANGED replaces the armed reload instead of stacking one', async () => {
-    // A fresh Response per call: a body can only be read once, so a shared
-    // instance would make the second attempt look like a malformed reply.
-    vi.spyOn(global, 'fetch').mockImplementation(async () => json({ error: 'PRICE_CHANGED' }, 409));
-
-    renderWithCart(<CheckoutButton />, [makeLine()]);
-    await clickCheckout();
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(500);
-    });
-    await clickCheckout();
-
-    // Far enough for both the orphaned first timer (t+2000) and the second
-    // (t+2500) to have fired, had the first survived.
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(2000);
-    });
-
-    expect(reloadLocation).toHaveBeenCalledTimes(1);
-  });
-
-  test('a retry that reaches Square is not yanked back by the armed reload', async () => {
-    vi.spyOn(global, 'fetch')
-      .mockResolvedValueOnce(json({ error: 'PRICE_CHANGED' }, 409))
+  test('a retry after the re-price gets through', async () => {
+    const fetchMock = vi
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce(json(priceChanged({ 'var-1': 5000 }), 409))
       .mockResolvedValueOnce(json({ url: 'https://square.link/u/abc' }, 200));
 
-    renderWithCart(<CheckoutButton />, [makeLine()]);
+    renderWithCart(<CheckoutButton />, [makeLine({ variationId: 'var-1', unitAmount: 4500 })]);
     await clickCheckout();
     await clickCheckout();
 
+    // The second attempt carries the price the server just quoted, which is the
+    // whole point — this loop used to be unbreakable.
+    const secondBody = JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string) as {
+      lines: CartLine[];
+    };
+    expect(secondBody.lines[0].unitAmount).toBe(5000);
     expect(assignLocation).toHaveBeenCalledWith('https://square.link/u/abc');
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(5000);
-    });
-
-    // A stale reload here would drag the shopper off the payment page.
-    expect(reloadLocation).not.toHaveBeenCalled();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
-  test('unmounting cancels the pending reload', async () => {
-    vi.spyOn(global, 'fetch').mockResolvedValue(json({ error: 'PRICE_CHANGED' }, 409));
+  test('re-prices only the variations the server named', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue(json(priceChanged({ 'var-1': 5000 }), 409));
 
-    const { unmount } = renderWithCart(<CheckoutButton />, [makeLine()]);
+    renderWithCart(<CheckoutButton />, [
+      makeLine({ variationId: 'var-1', unitAmount: 4500 }),
+      makeLine({ variationId: 'var-2', unitAmount: 3000 }),
+    ]);
     await clickCheckout();
-    unmount();
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(5000);
-    });
+    expect(readCartLines().map((l) => l.unitAmount)).toEqual([5000, 3000]);
+  });
 
-    expect(reloadLocation).not.toHaveBeenCalled();
+  test('a 409 with no usable prices still explains itself and leaves the cart intact', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue(
+      json({ error: 'PRICE_CHANGED', prices: { 'var-1': 'free' } }, 409),
+    );
+
+    renderWithCart(<CheckoutButton />, [makeLine({ variationId: 'var-1', unitAmount: 4500 })]);
+    await clickCheckout();
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/prices changed/i);
+    expect(readCartLines()[0].unitAmount).toBe(4500);
+    expect(checkoutButton()).toBeEnabled();
   });
 });
 

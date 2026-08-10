@@ -51,7 +51,13 @@ export async function POST(request: Request): Promise<Response> {
         { status: 409 },
       );
     case 'PRICE_CHANGED':
-      return Response.json({ error: 'PRICE_CHANGED' }, { status: 409 });
+      // The fresh catalog prices go back with the refusal so the cart can
+      // correct itself. Without them the shopper's stale localStorage price is
+      // re-sent on every retry and the 409 never clears.
+      return Response.json(
+        { error: 'PRICE_CHANGED', prices: result.prices ?? {} },
+        { status: 409 },
+      );
     case 'EMPTY_CART':
       // Unreachable through this route — zod rejects an empty `lines` array
       // first — but mapped rather than defaulted, so the switch stays exhaustive

@@ -35,6 +35,32 @@ export function setQuantity(lines: CartLine[], lineId: string, qty: number): Car
   return lines.map((l) => (l.lineId === lineId ? { ...l, quantity: clampQuantity(qty) } : l));
 }
 
+/**
+ * Applies fresh catalog prices (cents, keyed by Square variation id) to every
+ * line carrying one of those variations.
+ *
+ * This is the way out of a `PRICE_CHANGED` refusal. A line's `unitAmount` is
+ * captured when it goes into the cart and then persisted, so on its own it
+ * never becomes right again — the shopper retries, sends the same stale
+ * number, and is refused again. `/api/checkout` returns the real prices with
+ * the 409 and this puts them where the next attempt will read them.
+ *
+ * Prices come from a parsed JSON body, so anything that is not a finite number
+ * of cents is ignored rather than trusted. Returns the *same array* when
+ * nothing moved, so an unchanged cart neither re-renders nor rewrites storage.
+ */
+export function repriceLines(lines: CartLine[], prices: Record<string, number>): CartLine[] {
+  let changed = false;
+  const next = lines.map((line) => {
+    const price = prices[line.variationId];
+    if (typeof price !== 'number' || !Number.isFinite(price)) return line;
+    if (price === line.unitAmount) return line;
+    changed = true;
+    return { ...line, unitAmount: price };
+  });
+  return changed ? next : lines;
+}
+
 /** Cart subtotal in cents. */
 export function subtotal(lines: CartLine[]): number {
   return lines.reduce((sum, l) => sum + l.unitAmount * l.quantity, 0);

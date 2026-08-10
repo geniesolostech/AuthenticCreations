@@ -327,14 +327,53 @@ describe('createCheckout', () => {
     expect(gw.calls.getInventoryCounts).toHaveLength(0);
   });
 
-  it('returns PRICE_CHANGED when the catalog price no longer matches the cart price', async () => {
+  it('returns PRICE_CHANGED with the catalog price when the cart price no longer matches', async () => {
     const gw = shopGateway();
     const cart = [line({ variationId: 'var-ready', unitAmount: 4000 })];
 
     const result = await createCheckout(cart, gw);
 
-    expect(result).toEqual({ ok: false, error: 'PRICE_CHANGED' });
+    // The fresh price rides along, because a 409 with nothing but a code is a
+    // dead end: the cart's stale `unitAmount` lives in localStorage, so every
+    // retry — including one after a reload — sends the same wrong number.
+    expect(result).toEqual({
+      ok: false,
+      error: 'PRICE_CHANGED',
+      prices: { 'var-ready': 4500 },
+    });
     expect(gw.calls.createPaymentLink).toHaveLength(0);
+  });
+
+  it('reports a fresh price for every changed line and stays quiet about the rest', async () => {
+    const gw = shopGateway();
+    const cart = [
+      line({ variationId: 'var-ready', unitAmount: 4000 }),
+      line({ variationId: 'var-custom', unitAmount: 6000 }), // unchanged
+    ];
+
+    const result = await createCheckout(cart, gw);
+
+    expect(result).toEqual({
+      ok: false,
+      error: 'PRICE_CHANGED',
+      prices: { 'var-ready': 4500 },
+    });
+  });
+
+  it('reports each changed variation once, however many lines carry it', async () => {
+    const gw = shopGateway();
+    const cart = [
+      line({ variationId: 'var-ready', unitAmount: 4000 }),
+      line({ variationId: 'var-ready', unitAmount: 4200 }),
+    ];
+
+    const result = await createCheckout(cart, gw);
+
+    expect(result).toEqual({
+      ok: false,
+      error: 'PRICE_CHANGED',
+      prices: { 'var-ready': 4500 },
+    });
   });
 
   it('checks SOLD_OUT before PRICE_CHANGED', async () => {

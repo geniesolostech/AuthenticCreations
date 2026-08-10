@@ -1,14 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 
 import { useCart } from '@/lib/cart-context';
 import { MAX_CART_LINES } from '@/lib/constants';
-import { assignLocation, reloadLocation } from '@/lib/navigate';
-
-/** How long the "prices were updated" notice sits before the page reloads —
- * long enough to read, short enough that nobody wonders what happened. */
-const PRICE_CHANGED_RELOAD_DELAY_MS = 2000;
+import { assignLocation } from '@/lib/navigate';
 
 /**
  * Whether a checkout POST is in flight, deliberately held *outside* React.
@@ -63,13 +59,30 @@ type Status =
 
 const MESSAGES = {
   soldOut: 'oh no — something in your cart just sold out.',
-  priceChanged: 'prices were updated — please review your cart.',
+  priceChanged: "prices changed — the cart's been updated, take a look.",
   unavailable: "Square's having a moment — try again shortly.",
   offline: "we couldn't reach checkout — check your connection and try again.",
   generic: 'something looked off — please refresh and try again.',
 } as const;
 
 const OVER_LIMIT_MESSAGE = `your cart has more than ${MAX_CART_LINES} different items — take a few out and we'll get you checked out.`;
+
+/**
+ * The `prices` map out of a 409 body: variation id → price in cents.
+ *
+ * The body is parsed JSON, so nothing about its shape is guaranteed here even
+ * though our own route wrote it. Entries that are not a non-negative whole
+ * number of cents are dropped rather than written into the cart — a bad price
+ * in the cart is a wrong subtotal shown to a shopper.
+ */
+function pricesFrom(raw: unknown): Record<string, number> {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return {};
+  const out: Record<string, number> = {};
+  for (const [id, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof value === 'number' && Number.isInteger(value) && value >= 0) out[id] = value;
+  }
+  return out;
+}
 
 export interface CheckoutButtonProps {
   /** Receives the variation ids Square reported sold out — and `[]` when that
@@ -86,12 +99,9 @@ export interface CheckoutButtonProps {
  * Square's page must come back to the cart they left. Only `/thanks` empties it.
  */
 export default function CheckoutButton({ onSoldOutIds, className }: CheckoutButtonProps) {
-  const { lines, remove } = useCart();
+  const { lines, remove, reprice } = useCart();
   const pending = useSyncExternalStore(subscribeInFlight, getInFlight, getInFlightOnServer);
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
-  const reloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => () => clearReloadTimer(), []);
 
   // Firefox and Safari restore this page — and this component's state — from
   // the bfcache when a shopper backs out of Square's payment page. Without
@@ -105,13 +115,6 @@ export default function CheckoutButton({ onSoldOutIds, className }: CheckoutButt
     window.addEventListener('pageshow', handlePageShow);
     return () => window.removeEventListener('pageshow', handlePageShow);
   }, []);
-
-  function clearReloadTimer() {
-    if (reloadTimer.current !== null) {
-      clearTimeout(reloadTimer.current);
-      reloadTimer.current = null;
-    }
-  }
 
   const overLimit = lines.length > MAX_CART_LINES;
   const disabled = pending || lines.length === 0 || overLimit;
@@ -127,10 +130,6 @@ export default function CheckoutButton({ onSoldOutIds, className }: CheckoutButt
     if (disabled || checkoutInFlight) return;
     setCheckoutInFlight(true);
     setStatus({ kind: 'idle' });
-    // A reload armed by a previous PRICE_CHANGED must not survive this
-    // attempt: left running it would either double up with the next one or,
-    // worse, preempt the navigation to Square that this click is about to win.
-    clearReloadTimer();
     onSoldOutIds?.([]);
 
     let response: Response;
@@ -147,7 +146,12 @@ export default function CheckoutButton({ onSoldOutIds, className }: CheckoutButt
     }
 
     const body: unknown = await response.json().catch(() => null);
-    const payload = (body ?? {}) as { url?: unknown; error?: unknown; soldOutIds?: unknown };
+    const payload = (body ?? {}) as {
+      url?: unknown;
+      error?: unknown;
+      soldOutIds?: unknown;
+      prices?: unknown;
+    };
 
     if (response.ok) {
       if (typeof payload.url === 'string' && payload.url !== '') {
@@ -172,9 +176,13 @@ export default function CheckoutButton({ onSoldOutIds, className }: CheckoutButt
     }
 
     if (response.status === 409 && code === 'PRICE_CHANGED') {
+      // The server sent the prices it just read from Square's catalog. Writing
+      // them into the cart is the only thing that ends this refusal: the cart's
+      // own price is frozen at add-time and persisted, so a reload — which is
+      // what this used to do — restored the stale number and earned the same
+      // 409 again, forever.
+      reprice(pricesFrom(payload.prices));
       fail({ kind: 'priceChanged' });
-      // A beat to read the notice, then fresh prices from the server.
-      reloadTimer.current = setTimeout(reloadLocation, PRICE_CHANGED_RELOAD_DELAY_MS);
       return;
     }
 
@@ -191,11 +199,6 @@ export default function CheckoutButton({ onSoldOutIds, className }: CheckoutButt
     setStatus({ kind: 'idle' });
   }
 
-  function handleReloadNow() {
-    clearReloadTimer();
-    reloadLocation();
-  }
-
   return (
     <div className={`flex flex-col gap-3${className ? ` ${className}` : ''}`}>
       {overLimit && <p className="font-body text-sm text-rust">{OVER_LIMIT_MESSAGE}</p>}
@@ -210,15 +213,6 @@ export default function CheckoutButton({ onSoldOutIds, className }: CheckoutButt
               className="self-start font-body text-sm font-semibold text-rust underline underline-offset-2"
             >
               Remove sold-out items
-            </button>
-          )}
-          {status.kind === 'priceChanged' && (
-            <button
-              type="button"
-              onClick={handleReloadNow}
-              className="self-start font-body text-sm font-semibold text-rust underline underline-offset-2"
-            >
-              Refresh now
             </button>
           )}
         </div>

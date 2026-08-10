@@ -188,11 +188,16 @@ describe('POST /api/checkout — 409 conflicts', () => {
     expect(gw.calls.createPaymentLink).toHaveLength(0);
   });
 
-  it('returns 409 PRICE_CHANGED when the cart price no longer matches the catalog', async () => {
+  it('returns 409 PRICE_CHANGED with the fresh prices when the cart price is stale', async () => {
     const response = await POST(post({ lines: [line({ unitAmount: 4000 })] }));
 
     expect(response.status).toBe(409);
-    await expect(response.json()).resolves.toEqual({ error: 'PRICE_CHANGED' });
+    // The prices are what lets the cart re-price itself; without them the
+    // shopper's only route out of a 409 is emptying the cart by hand.
+    await expect(response.json()).resolves.toEqual({
+      error: 'PRICE_CHANGED',
+      prices: { 'var-ready': 4500 },
+    });
     expect(gw.calls.createPaymentLink).toHaveLength(0);
   });
 });

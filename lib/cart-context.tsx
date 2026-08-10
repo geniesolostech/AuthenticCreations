@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
-import { addLine, itemCount, removeLine, setQuantity, subtotal } from '@/lib/cart';
+import { addLine, itemCount, removeLine, repriceLines, setQuantity, subtotal } from '@/lib/cart';
 import type { CartLine } from '@/lib/types';
 
 const STORAGE_KEY = 'ac-cart-v1';
@@ -11,6 +11,13 @@ interface CartContextValue {
   add: (line: Omit<CartLine, 'lineId'>) => void;
   remove: (lineId: string) => void;
   setQty: (lineId: string, qty: number) => void;
+  /**
+   * Replaces the stored unit price of every line carrying one of the given
+   * variations. `/api/checkout` supplies the map when it refuses a checkout
+   * with `PRICE_CHANGED`; see `repriceLines` for why the cart cannot recover
+   * without it.
+   */
+  reprice: (prices: Record<string, number>) => void;
   clear: () => void;
   subtotal: number;
   itemCount: number;
@@ -65,6 +72,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setLines((prev) => setQuantity(prev, lineId, qty));
   }, []);
 
+  const reprice = useCallback((prices: Record<string, number>) => {
+    // `repriceLines` returns the same array when nothing moved, so React bails
+    // out of the update and the persistence effect below does not re-fire.
+    setLines((prev) => repriceLines(prev, prices));
+  }, []);
+
   const clear = useCallback(() => {
     setLines([]);
   }, []);
@@ -74,6 +87,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     add,
     remove,
     setQty,
+    reprice,
     clear,
     subtotal: subtotal(lines),
     itemCount: itemCount(lines),

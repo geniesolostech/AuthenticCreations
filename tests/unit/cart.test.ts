@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { addLine, removeLine, setQuantity, subtotal, itemCount } from '@/lib/cart';
+import { addLine, itemCount, removeLine, repriceLines, setQuantity, subtotal } from '@/lib/cart';
 import { CartProvider, useCart } from '@/lib/cart-context';
 import type { CartLine } from '@/lib/types';
 
@@ -94,6 +94,51 @@ describe('itemCount', () => {
     lines = addLine(lines, makeLine({ variationId: 'var-2', quantity: 3 }));
 
     expect(itemCount(lines)).toBe(5);
+  });
+});
+
+describe('repriceLines', () => {
+  test('writes the fresh price onto every line carrying that variation', () => {
+    let lines = addLine([], makeLine({ variationId: 'var-1', unitAmount: 4500, quantity: 2 }));
+    lines = addLine(lines, makeLine({ variationId: 'var-1', unitAmount: 4500, custom: { color: 'Red', comments: '' } }));
+
+    const repriced = repriceLines(lines, { 'var-1': 5000 });
+
+    expect(repriced.map((l) => l.unitAmount)).toEqual([5000, 5000]);
+    // Everything else about a line survives — quantity, custom note, line id.
+    expect(repriced[0].quantity).toBe(2);
+    expect(repriced[1].custom).toEqual({ color: 'Red', comments: '' });
+    expect(repriced.map((l) => l.lineId)).toEqual(lines.map((l) => l.lineId));
+  });
+
+  test('leaves lines whose variation is not mentioned alone', () => {
+    let lines = addLine([], makeLine({ variationId: 'var-1', unitAmount: 4500 }));
+    lines = addLine(lines, makeLine({ variationId: 'var-2', unitAmount: 3000 }));
+
+    const repriced = repriceLines(lines, { 'var-1': 5000 });
+
+    expect(repriced.map((l) => l.unitAmount)).toEqual([5000, 3000]);
+  });
+
+  test('ignores a price that is not a usable number of cents', () => {
+    const lines = addLine([], makeLine({ variationId: 'var-1', unitAmount: 4500 }));
+
+    // The map arrives as parsed JSON from the network, so it is not a
+    // `Record<string, number>` until something checks.
+    const repriced = repriceLines(lines, {
+      'var-1': Number.NaN,
+    } as unknown as Record<string, number>);
+
+    expect(repriced[0].unitAmount).toBe(4500);
+  });
+
+  test('returns the same array when nothing actually moved', () => {
+    const lines = addLine([], makeLine({ variationId: 'var-1', unitAmount: 4500 }));
+
+    // Identity, not just equality: an unchanged cart must not re-render the
+    // whole tree or rewrite localStorage.
+    expect(repriceLines(lines, { 'var-1': 4500 })).toBe(lines);
+    expect(repriceLines(lines, {})).toBe(lines);
   });
 });
 

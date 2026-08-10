@@ -132,7 +132,22 @@ function trim(cache: Map<string, CacheEntry>, maxEntries: number): void {
 
 export type CheckoutResult =
   | { ok: true; url: string }
-  | { ok: false; error: CheckoutErrorCode; soldOutIds?: string[] };
+  | {
+      ok: false;
+      error: CheckoutErrorCode;
+      /** Variations Square will not sell right now (`SOLD_OUT` only). */
+      soldOutIds?: string[];
+      /**
+       * Catalog price in cents, per variation whose price moved
+       * (`PRICE_CHANGED` only).
+       *
+       * The cart's `unitAmount` is frozen at add-time and persisted, so a bare
+       * `PRICE_CHANGED` is a dead end: the shopper retries, sends the same
+       * stale number, and gets the same 409 forever. Carrying the fresh price
+       * back is what lets the cart correct itself.
+       */
+      prices?: Record<string, number>;
+    };
 
 /**
  * Validates a cart against live Square state and, if it holds up, returns a
@@ -190,11 +205,25 @@ export async function createCheckout(
     });
     if (soldOutIds.length > 0) return { ok: false, error: 'SOLD_OUT', soldOutIds };
 
+    // Keyed by variation, not by line: two lines of the same variation share
+    // one catalog price, and the client re-prices by variation id.
+    const changedPrices = new Map<string, number>();
     for (const line of cart) {
       const info = variations.get(line.variationId);
-      if (info === undefined || info.priceCents !== line.unitAmount) {
-        return { ok: false, error: 'PRICE_CHANGED' };
+      // Unreachable — a variation missing from the catalog was reported sold
+      // out above — but a fall-through here would send the buyer to Square at
+      // a price nobody checked, so it stays.
+      if (info === undefined) return { ok: false, error: 'PRICE_CHANGED' };
+      if (info.priceCents !== line.unitAmount) {
+        changedPrices.set(line.variationId, info.priceCents);
       }
+    }
+    if (changedPrices.size > 0) {
+      return {
+        ok: false,
+        error: 'PRICE_CHANGED',
+        prices: Object.fromEntries(changedPrices),
+      };
     }
 
     const { url } = await gw.createPaymentLink({
