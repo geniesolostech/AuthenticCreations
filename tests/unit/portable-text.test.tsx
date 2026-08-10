@@ -162,6 +162,25 @@ describe('RichText', () => {
       expect(screen.getByRole('link', { name: 'click here' })).toHaveAttribute('href', '#');
     });
 
+    test('a scheme hidden behind a leading space is still caught', () => {
+      // A browser trims leading whitespace before resolving an href, so
+      // " javascript:…" is a live javascript: URL. A detection pass that
+      // strips control characters but not the plain space (0x20) walks
+      // straight past it.
+      render(<RichText value={linkBlock(' javascript:alert(1)')} />);
+      expect(screen.getByRole('link', { name: 'click here' })).toHaveAttribute('href', '#');
+    });
+
+    test.each([
+      ['a leading tab', '\tjavascript:alert(1)'],
+      ['a leading newline', '\njavascript:alert(1)'],
+      ['leading mixed whitespace', ' \t\n javascript:alert(1)'],
+      ['whitespace inside the scheme', 'java script:alert(1)'],
+    ])('%s does not smuggle a javascript: href through', (_label, href) => {
+      render(<RichText value={linkBlock(href)} />);
+      expect(screen.getByRole('link', { name: 'click here' })).toHaveAttribute('href', '#');
+    });
+
     test.each(['http://example.com', 'https://example.com', 'mailto:hello@example.com', 'tel:+15555550123'])(
       'an allowed scheme (%s) passes through unchanged',
       (href) => {
