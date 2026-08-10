@@ -14,6 +14,14 @@ import { makeInventoryService, type InventoryService } from '@/lib/square/servic
 export const dynamic = 'force-dynamic';
 
 /**
+ * `dynamic` keeps Next from caching this route, but it emits no cache header of
+ * its own, which would leave a CDN or browser free to reuse a response under its
+ * own heuristics. A stale count reads as stock that is not there, so say it
+ * outright on every response.
+ */
+const NO_STORE = { 'cache-control': 'no-store' } as const;
+
+/**
  * Module-level singleton, so the service's per-id TTL cache is shared across
  * requests instead of being thrown away after each one.
  *
@@ -41,17 +49,17 @@ export function _resetGatewayForTests(): void {
 export async function GET(request: Request): Promise<Response> {
   const ids = parseInventoryIds(new URL(request.url).searchParams.get('ids'));
   if (ids === null) {
-    return Response.json({ error: 'INVALID_REQUEST' }, { status: 400 });
+    return Response.json({ error: 'INVALID_REQUEST' }, { status: 400, headers: NO_STORE });
   }
 
   try {
     const counts = await inventory().counts(ids);
-    return Response.json({ counts });
+    return Response.json({ counts }, { headers: NO_STORE });
   } catch (error) {
     // Unlike checkout, `counts()` lets gateway failures propagate. Log the
     // detail server-side and hand the client the same opaque code the checkout
     // route uses — never the SDK's message, which can carry request context.
     console.error('[api/inventory] inventory lookup failed', error);
-    return Response.json({ error: 'SQUARE_UNAVAILABLE' }, { status: 503 });
+    return Response.json({ error: 'SQUARE_UNAVAILABLE' }, { status: 503, headers: NO_STORE });
   }
 }

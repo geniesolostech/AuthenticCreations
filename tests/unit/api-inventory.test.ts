@@ -123,6 +123,12 @@ describe('GET /api/inventory', () => {
     expect(body).not.toMatch(/zod|expected|received|invalid_type|stack/i);
   });
 
+  it('marks counts as uncacheable so no CDN can serve stale stock', async () => {
+    const response = await GET(get('?ids=var-a'));
+
+    expect(response.headers.get('cache-control')).toMatch(/no-store/);
+  });
+
   it('serves a second identical request from the module-level cache', async () => {
     await GET(get('?ids=var-a'));
     const response = await GET(get('?ids=var-a'));
