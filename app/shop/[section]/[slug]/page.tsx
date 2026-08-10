@@ -5,8 +5,8 @@ import ProductPurchasePanel, { type PurchaseOption } from '@/components/product-
 import { SECTIONS } from '@/lib/constants';
 import { urlFor } from '@/lib/sanity/image';
 import { getProduct, getProducts } from '@/lib/sanity/queries';
-import { realGateway, type VariationInfo } from '@/lib/square/gateway';
-import type { Section } from '@/lib/types';
+import { fetchPricesAndStock } from '@/lib/shop/fetch-prices';
+import { isSection } from '@/lib/shop/is-section';
 
 // Note: once Task 7 adds the static `app/shop/[section]/custom/page.tsx`
 // route, Next.js resolves it in preference to this dynamic `[slug]` segment
@@ -33,35 +33,9 @@ export async function generateStaticParams(): Promise<{ section: string; slug: s
   }
 }
 
-function isSection(value: string): value is Section {
-  return (SECTIONS as readonly string[]).includes(value);
-}
-
 interface VariationOption {
   label: string;
   squareVariationId: string;
-}
-
-/**
- * Server-fetches Square prices/stock for the given variation ids. Never
- * throws: an unset or unreachable Square falls back to empty maps, so the
- * page still renders with "Price at checkout" and a disabled Add to Cart
- * rather than crashing.
- */
-async function fetchPricesAndStock(
-  ids: string[],
-): Promise<{ variations: Map<string, VariationInfo>; counts: Record<string, number> }> {
-  try {
-    const gw = realGateway();
-    const variations = await gw.getVariations(ids);
-    const trackedIds = ids.filter((id) => variations.get(id)?.trackInventory);
-    const counts =
-      trackedIds.length > 0 ? Object.fromEntries(await gw.getInventoryCounts(trackedIds)) : {};
-    return { variations, counts };
-  } catch (error) {
-    console.error('[shop] failed to fetch Square prices/stock', error);
-    return { variations: new Map(), counts: {} };
-  }
 }
 
 export default async function ProductDetailPage({

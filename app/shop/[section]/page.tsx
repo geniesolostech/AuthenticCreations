@@ -4,7 +4,8 @@ import { notFound } from 'next/navigation';
 import ProductCard from '@/components/product-card';
 import { isSoldOut } from '@/lib/inventory-status';
 import { getProducts, type Product } from '@/lib/sanity/queries';
-import { realGateway, type VariationInfo } from '@/lib/square/gateway';
+import { fetchPricesAndStock } from '@/lib/shop/fetch-prices';
+import { isSection } from '@/lib/shop/is-section';
 import { SECTIONS } from '@/lib/constants';
 import type { Section } from '@/lib/types';
 
@@ -19,10 +20,6 @@ export function generateStaticParams() {
   return SECTIONS.map((section) => ({ section }));
 }
 
-function isSection(value: string): value is Section {
-  return (SECTIONS as readonly string[]).includes(value);
-}
-
 /**
  * The variation id used to price/stock a product tile on the grid: its own
  * base variation, or — for a product that only sells as named variants (e.g.
@@ -32,29 +29,6 @@ function isSection(value: string): value is Section {
  */
 function primaryVariationId(product: Product): string {
   return product.squareVariationId || product.variants?.[0]?.squareVariationId || '';
-}
-
-/**
- * Server-fetches Square prices/stock for every product on this grid in one
- * batch. Never throws: an unset or unreachable Square (dev without creds, or
- * an outage) falls back to empty maps, which renders every tile with a
- * "Price at checkout" fallback and a disabled Add to Cart, rather than a
- * crashed page.
- */
-async function fetchPricesAndStock(
-  ids: string[],
-): Promise<{ variations: Map<string, VariationInfo>; counts: Record<string, number> }> {
-  try {
-    const gw = realGateway();
-    const variations = await gw.getVariations(ids);
-    const trackedIds = ids.filter((id) => variations.get(id)?.trackInventory);
-    const counts =
-      trackedIds.length > 0 ? Object.fromEntries(await gw.getInventoryCounts(trackedIds)) : {};
-    return { variations, counts };
-  } catch (error) {
-    console.error('[shop] failed to fetch Square prices/stock', error);
-    return { variations: new Map(), counts: {} };
-  }
 }
 
 export default async function ShopSectionPage({
