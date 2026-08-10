@@ -48,7 +48,7 @@ export default async function CommunityPage() {
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
       <h1 className="font-heading text-3xl text-charcoal sm:text-4xl">Community</h1>
       <p className="mt-3 font-body text-charcoal">
-        Cozy virtual crochet circles — bring your yarn, a warm drink, and whatever you&apos;re
+        Cozy virtual crochet circles: bring your yarn, a warm drink, and whatever you&apos;re
         working on. Save a seat with just your name and email; CJ sends the call link before we
         start.
       </p>

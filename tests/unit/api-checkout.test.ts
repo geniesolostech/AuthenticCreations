@@ -40,7 +40,7 @@ function customLine(overrides: Record<string, unknown> = {}): Record<string, unk
   return line({
     lineId: 'line-2',
     variationId: 'var-custom',
-    name: 'Custom — Crochet Beanie',
+    name: 'Custom: Crochet Beanie',
     unitAmount: 6000,
     custom: { color: 'Blue', comments: 'Extra slouchy please.' },
     ...overrides,

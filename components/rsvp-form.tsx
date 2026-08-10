@@ -35,20 +35,20 @@ const TERMINAL: ReadonlySet<Outcome> = new Set<Outcome>([
 
 const MESSAGES: Record<Outcome, string> = {
   created: "You're in! CJ will email you the call link before we start.",
-  duplicate: "you're already signed up — see you there!",
+  duplicate: "you're already signed up, see you there!",
   full: CIRCLE_FULL_MESSAGE,
-  past: `${CIRCLE_MET_MESSAGE} — watch for the next one`,
-  notFound: "we couldn't find that circle — it may have moved",
+  past: `${CIRCLE_MET_MESSAGE}, watch for the next one`,
+  notFound: "we couldn't find that circle; it may have moved",
   invalid: 'check your name and email, then try again?',
   // Distinct from `hiccup` on purpose: "try again" is exactly the wrong advice
   // for someone the server has just asked to slow down.
-  throttled: "that's a few tries in a row — give it a couple of minutes and we'll try again",
-  hiccup: 'something hiccuped — try again?',
+  throttled: "that's a few tries in a row; give it a couple of minutes and we'll try again",
+  hiccup: 'something hiccuped, try again?',
 };
 
 const FIELD_HINTS = {
   name: "add your name so CJ knows who's coming",
-  email: 'check that email address — it is where the call link goes',
+  email: 'check that email address; it is where the call link goes',
 } as const;
 
 /** HTTP status → outcome. Anything unlisted is a hiccup worth retrying. */

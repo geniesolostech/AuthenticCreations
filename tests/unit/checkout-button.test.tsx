@@ -197,7 +197,7 @@ describe('CheckoutButton — 409 SOLD_OUT', () => {
 
     renderWithCart(<CheckoutButton onSoldOutIds={onSoldOutIds} />, [
       makeLine({ variationId: 'var-gone', name: 'Sold Out Beanie' }),
-      makeLine({ variationId: 'var-gone', name: 'Custom — Sold Out Beanie', custom: { color: 'Red', comments: '' } }),
+      makeLine({ variationId: 'var-gone', name: 'Custom: Sold Out Beanie', custom: { color: 'Red', comments: '' } }),
       makeLine({ variationId: 'var-ok', name: 'Flower Clip' }),
     ]);
     await clickCheckout();
@@ -252,7 +252,7 @@ describe('CheckoutButton — 409 PRICE_CHANGED', () => {
     await clickCheckout();
 
     expect(screen.getByRole('alert')).toHaveTextContent(
-      /prices changed — the cart's been updated, take a look/i,
+      /prices changed: the cart's been updated, take a look/i,
     );
     expect(readCartLines()[0].unitAmount).toBe(5000);
     // A reload was the old remedy and it never worked: the stale price lives in
@@ -323,7 +323,7 @@ describe('CheckoutButton — 503, 400 and network faults', () => {
     renderWithCart(<CheckoutButton />, [makeLine()]);
     await clickCheckout();
 
-    expect(screen.getByRole('alert')).toHaveTextContent(/square's having a moment — try again shortly/i);
+    expect(screen.getByRole('alert')).toHaveTextContent(/square's having a moment, try again shortly/i);
     expect(readCartLines()).toHaveLength(1);
     expect(checkoutButton()).toBeEnabled();
     expect(assignLocation).not.toHaveBeenCalled();
@@ -348,7 +348,7 @@ describe('CheckoutButton — 503, 400 and network faults', () => {
     renderWithCart(<CheckoutButton />, [makeLine()]);
     await clickCheckout();
 
-    expect(screen.getByRole('alert')).toHaveTextContent(/something looked off — please refresh and try again/i);
+    expect(screen.getByRole('alert')).toHaveTextContent(/something looked off; please refresh and try again/i);
     expect(readCartLines()).toHaveLength(1);
     expect(checkoutButton()).toBeEnabled();
   });

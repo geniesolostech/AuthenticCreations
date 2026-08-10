@@ -73,7 +73,7 @@ export default async function CustomOrderPage({
         Custom {SECTION_TITLES[section]}
       </h1>
       <p className="mt-3 font-body text-charcoal">
-        Custom pieces are made just for you — please allow extra time before your order ships.
+        Custom pieces are made just for you; please allow extra time before your order ships.
       </p>
 
       {options.length === 0 ? (

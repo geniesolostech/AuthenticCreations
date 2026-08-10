@@ -92,7 +92,7 @@ describe('/community/[slug] — a full circle', () => {
     render(await renderPage('august-circle'));
 
     expect(
-      screen.getByText('this circle is full 💛 — check back for the next one'),
+      screen.getByText('this circle is full 💛, check back for the next one'),
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /save my seat/i })).not.toBeInTheDocument();
   });

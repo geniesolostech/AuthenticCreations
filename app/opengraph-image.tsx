@@ -16,7 +16,7 @@ const CREAM = '#f7f1e5';
 const CHARCOAL = '#3a3734';
 const RUST = '#c9622b';
 
-export const alt = 'Authentic Creations — Find you in whatever you do.';
+export const alt = 'Authentic Creations: Find you in whatever you do.';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 

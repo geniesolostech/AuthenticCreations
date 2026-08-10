@@ -75,7 +75,7 @@ export default function ProductPurchasePanel({ productName, options, imageUrl }:
       {soldOut && <SoldOutBadge />}
       <AddToCart
         variationId={selected?.variationId ?? ''}
-        name={options.length > 1 && selected ? `${productName} — ${selected.label}` : productName}
+        name={options.length > 1 && selected ? `${productName}: ${selected.label}` : productName}
         priceCents={selected?.priceCents ?? null}
         soldOut={soldOut}
         imageUrl={imageUrl}

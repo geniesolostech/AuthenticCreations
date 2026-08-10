@@ -22,7 +22,7 @@ export default function Hero() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/logo.png"
-          alt="Authentic Creations — Find you in whatever you do"
+          alt="Authentic Creations: Find you in whatever you do"
           className="w-full max-w-xs sm:max-w-sm"
         />
         <h1 className="font-heading text-3xl text-charcoal sm:text-4xl">Authentic Creations</h1>

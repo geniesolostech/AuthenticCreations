@@ -77,7 +77,7 @@ describe('/ — hero', () => {
 
     expect(screen.getByRole('heading', { level: 1, name: 'Authentic Creations' })).toBeInTheDocument();
     const logo = screen.getByRole('img', {
-      name: 'Authentic Creations — Find you in whatever you do',
+      name: 'Authentic Creations: Find you in whatever you do',
     });
     expect(logo).toBeInTheDocument();
     // The transparent PNG, not the source JPEG: the JPEG's baked-in white

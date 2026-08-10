@@ -139,7 +139,7 @@ function events(): EventDoc[] {
       title: 'Cozy crochet circle',
       slug: FIXTURE_OPEN_EVENT_SLUG,
       startsAt: daysFromNow(7),
-      description: 'Bring your yarn and a warm drink — we stitch together for an hour.',
+      description: 'Bring your yarn and a warm drink; we stitch together for an hour.',
       capacity: 12,
     },
     {
@@ -228,7 +228,7 @@ const POSTS: Post[] = [
     publishedAt: '2026-06-14T09:00:00.000Z',
     body: [
       paragraph('p1', 'Cotton breathes, linen holds a brim, and a blend splits the difference.'),
-      paragraph('p2', 'Whatever you pick, swatch first — gauge changes everything about a hat.'),
+      paragraph('p2', 'Whatever you pick, swatch first: gauge changes everything about a hat.'),
     ],
   },
   {
@@ -248,7 +248,7 @@ const ABOUT: AboutPage = {
   body: [
     paragraph(
       'p1',
-      'CJ Lavender is an artist, a musician, a therapist, and — stitch by stitch — the whole of Authentic Creations.',
+      'CJ Lavender is an artist, a musician, a therapist, and, stitch by stitch, the whole of Authentic Creations.',
     ),
     paragraph(
       'p2',

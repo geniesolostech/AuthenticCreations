@@ -115,7 +115,7 @@ describe('RsvpForm — terminal answers', () => {
     await signUp(user);
 
     expect(
-      await screen.findByText("you're already signed up — see you there!"),
+      await screen.findByText("you're already signed up, see you there!"),
     ).toBeInTheDocument();
     expect(nameField()).not.toBeInTheDocument();
   });
@@ -128,7 +128,7 @@ describe('RsvpForm — terminal answers', () => {
     await signUp(user);
 
     expect(
-      await screen.findByText('this circle is full 💛 — check back for the next one'),
+      await screen.findByText('this circle is full 💛, check back for the next one'),
     ).toBeInTheDocument();
     expect(nameField()).not.toBeInTheDocument();
   });
@@ -163,7 +163,7 @@ describe('RsvpForm — terminal answers', () => {
     await signUp(user);
 
     expect(
-      await screen.findByText('this circle is full 💛 — check back for the next one'),
+      await screen.findByText('this circle is full 💛, check back for the next one'),
     ).toBeInTheDocument();
   });
 });
@@ -336,7 +336,7 @@ describe('RsvpForm — retryable faults', () => {
     render(<RsvpForm eventSlug="august-circle" />);
     await signUp(user);
 
-    expect(await screen.findByText(/something hiccuped — try again\?/i)).toBeInTheDocument();
+    expect(await screen.findByText(/something hiccuped, try again\?/i)).toBeInTheDocument();
     expect(nameField()).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /save my seat/i })).toBeEnabled();
   });
@@ -348,7 +348,7 @@ describe('RsvpForm — retryable faults', () => {
     render(<RsvpForm eventSlug="august-circle" />);
     await signUp(user);
 
-    expect(await screen.findByText(/something hiccuped — try again\?/i)).toBeInTheDocument();
+    expect(await screen.findByText(/something hiccuped, try again\?/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /save my seat/i })).toBeEnabled();
   });
 
@@ -359,7 +359,7 @@ describe('RsvpForm — retryable faults', () => {
     render(<RsvpForm eventSlug="august-circle" />);
     await signUp(user);
 
-    expect(await screen.findByText(/something hiccuped — try again\?/i)).toBeInTheDocument();
+    expect(await screen.findByText(/something hiccuped, try again\?/i)).toBeInTheDocument();
   });
 
   test('retrying after a hiccup can still book the seat, and clears the notice', async () => {

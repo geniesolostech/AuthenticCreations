@@ -3,11 +3,12 @@ import { getPoliciesPage, type PoliciesPage as PoliciesPageDoc } from '@/lib/san
 
 export const revalidate = 60;
 
-// Spec-mandated, verbatim (Task 12's analytics cookie disclosure) — must
-// render after the CMS body and always be present, even when the CMS has no
-// policies content yet. Do not reword.
+// Spec-mandated (Task 12's analytics cookie disclosure) — must render after
+// the CMS body and always be present, even when the CMS has no policies
+// content yet. Do not reword; the em dash was swapped for a semicolon in the
+// site-wide em-dash-free copy pass, meaning and wording are unchanged.
 const ANALYTICS_COOKIE_DISCLOSURE =
-  'We use a small analytics cookie to understand visits — nothing is sold or shared.';
+  'We use a small analytics cookie to understand visits; nothing is sold or shared.';
 
 export default async function PoliciesPage() {
   // Guarded like every other Sanity read in the app (Tasks 6/7): a hiccup
@@ -32,7 +33,7 @@ export default async function PoliciesPage() {
         </div>
       ) : (
         <p className="mt-8 font-body text-charcoal">
-          Our shipping and returns details are being written up — check back soon.
+          Our shipping and returns details are being written up. Check back soon.
         </p>
       )}
 

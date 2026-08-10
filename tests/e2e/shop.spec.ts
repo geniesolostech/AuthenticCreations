@@ -154,7 +154,7 @@ test.describe('shop', () => {
     // The cart line says who it is for and what was asked for.
     const panel = miniCart(page);
     await expect(panel).toBeVisible();
-    await expect(panel.getByText(`Custom — ${RUFFLED_HAT.name}`)).toBeVisible();
+    await expect(panel.getByText(`Custom: ${RUFFLED_HAT.name}`)).toBeVisible();
     await expect(panel.getByText('Color: Blue')).toBeVisible();
     await expect(panel.getByText(comments)).toBeVisible();
     await expect(panel.getByTestId('cart-subtotal')).toHaveText(RUFFLED_HAT.customPrice);
@@ -208,7 +208,7 @@ test.describe('shop', () => {
 
     const panel = miniCart(page);
     await expect(panel).toBeVisible();
-    await expect(panel.getByText('Crochet flowers — Tulip')).toBeVisible();
+    await expect(panel.getByText('Crochet flowers: Tulip')).toBeVisible();
     await expect(panel.getByTestId('cart-subtotal')).toHaveText('$9.00');
   });
 });

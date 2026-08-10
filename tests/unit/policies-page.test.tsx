@@ -11,9 +11,10 @@ vi.mock('@/lib/sanity/queries', () => ({
 
 const mockedGetPoliciesPage = vi.mocked(getPoliciesPage);
 
-// Spec-mandated, exact wording — Task 12's analytics cookie disclosure.
+// Spec-mandated, exact wording (Task 12's analytics cookie disclosure); the
+// em dash became a semicolon in the site-wide em-dash-free copy pass.
 const COOKIE_SENTENCE =
-  'We use a small analytics cookie to understand visits — nothing is sold or shared.';
+  'We use a small analytics cookie to understand visits; nothing is sold or shared.';
 
 describe('/policies', () => {
   beforeEach(() => {

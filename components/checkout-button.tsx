@@ -58,14 +58,14 @@ type Status =
   | { kind: 'generic' };
 
 const MESSAGES = {
-  soldOut: 'oh no — something in your cart just sold out.',
-  priceChanged: "prices changed — the cart's been updated, take a look.",
-  unavailable: "Square's having a moment — try again shortly.",
-  offline: "we couldn't reach checkout — check your connection and try again.",
-  generic: 'something looked off — please refresh and try again.',
+  soldOut: 'oh no, something in your cart just sold out.',
+  priceChanged: "prices changed: the cart's been updated, take a look.",
+  unavailable: "Square's having a moment, try again shortly.",
+  offline: "we couldn't reach checkout; check your connection and try again.",
+  generic: 'something looked off; please refresh and try again.',
 } as const;
 
-const OVER_LIMIT_MESSAGE = `your cart has more than ${MAX_CART_LINES} different items — take a few out and we'll get you checked out.`;
+const OVER_LIMIT_MESSAGE = `your cart has more than ${MAX_CART_LINES} different items; take a few out and we'll get you checked out.`;
 
 /**
  * The `prices` map out of a 409 body: variation id → price in cents.

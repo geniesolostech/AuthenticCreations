@@ -42,7 +42,7 @@ export default async function AboutPage() {
         </div>
       ) : (
         <p className="mt-8 font-body text-charcoal">
-          Her story is still being written — check back soon to learn more about CJ.
+          Her story is still being written. Check back soon to learn more about CJ.
         </p>
       )}
     </div>

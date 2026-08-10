@@ -20,7 +20,7 @@ export default function PlaceholderImage({ title, className, hideTitle = false }
     <svg
       viewBox="0 0 400 400"
       role="img"
-      aria-label={`${title} — photo coming soon`}
+      aria-label={`${title}, photo coming soon`}
       className={`h-full w-full max-w-full${className ? ` ${className}` : ''}`}
     >
       <rect width="400" height="400" className="fill-linen" />

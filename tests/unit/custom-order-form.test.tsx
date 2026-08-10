@@ -78,7 +78,7 @@ describe('CustomOrderForm', () => {
     expect(lines).toHaveLength(1);
     expect(lines[0]).toMatchObject({
       variationId: 'cust-beanie-1',
-      name: 'Custom — Custom Beanie',
+      name: 'Custom: Custom Beanie',
       unitAmount: 4500,
       quantity: 1,
       custom: { color: 'Red', comments: 'Extra fringe please' },
@@ -182,7 +182,7 @@ describe('CustomOrderForm', () => {
     expect(lines).toHaveLength(1);
     expect(lines[0]).toMatchObject({
       variationId: 'cust-scarf-1',
-      name: 'Custom — Custom Scarf',
+      name: 'Custom: Custom Scarf',
       unitAmount: 6000,
       quantity: 1,
       custom: { color: 'Green', comments: '' },

@@ -119,7 +119,7 @@ describe('createCheckout', () => {
       line({ variationId: 'var-ready', unitAmount: 4500, quantity: 2 }),
       line({
         variationId: 'var-custom',
-        name: 'Custom — Crochet Beanie',
+        name: 'Custom: Crochet Beanie',
         unitAmount: 6000,
         quantity: 1,
         custom: { color: 'Blue', comments: 'Please make it extra slouchy.' },

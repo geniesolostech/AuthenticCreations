@@ -66,7 +66,7 @@ export default function CustomOrderForm({ products }: CustomOrderFormProps) {
 
     add({
       variationId: selected.customVariationId,
-      name: `Custom — ${selected.title}`,
+      name: `Custom: ${selected.title}`,
       unitAmount: selected.priceCents as number,
       quantity: 1,
       imageUrl: selected.imageUrl,

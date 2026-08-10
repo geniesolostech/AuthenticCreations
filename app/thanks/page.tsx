@@ -6,7 +6,7 @@ import { useEffect } from 'react';
 import { useCart } from '@/lib/cart-context';
 
 const CUSTOM_REMINDER =
-  'Ordered something custom? Made-to-order pieces are crocheted just for you, so please allow a little extra time — CJ will reach out if she has any questions about your colors or comments.';
+  'Ordered something custom? Made-to-order pieces are crocheted just for you, so please allow a little extra time; CJ will reach out if she has any questions about your colors or comments.';
 
 /**
  * Square's return page. This — and only this — empties the cart: a shopper who

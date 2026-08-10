@@ -48,7 +48,7 @@ export default async function ShopSectionPage({
 
       {products.length === 0 ? (
         <p className="mt-8 font-body text-charcoal">
-          Our shelves for this corner of the shop are still being stitched together — check back soon.
+          Our shelves for this corner of the shop are still being stitched together. Check back soon.
         </p>
       ) : null}
 

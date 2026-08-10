@@ -179,7 +179,7 @@ describe('MiniCart contents', () => {
     const user = userEvent.setup();
     renderCartUi([
       makeLine({
-        name: 'Custom — Crochet Beanie',
+        name: 'Custom: Crochet Beanie',
         custom: { color: 'Purple', comments: 'please add a big pom pom on top' },
       }),
     ]);
@@ -229,7 +229,7 @@ describe('MiniCart contents', () => {
     await user.click(screen.getByRole('button', { name: /cart/i }));
 
     const scope = within(panel());
-    expect(scope.getByText(/your cart is empty — go find something cozy/i)).toBeInTheDocument();
+    expect(scope.getByText(/your cart is empty, go find something cozy/i)).toBeInTheDocument();
     expect(scope.getByRole('link', { name: /hats/i })).toHaveAttribute('href', '/shop/hats');
     expect(scope.getByRole('link', { name: /accessories/i })).toHaveAttribute('href', '/shop/accessories');
     expect(scope.getByRole('button', { name: /checkout/i })).toBeDisabled();

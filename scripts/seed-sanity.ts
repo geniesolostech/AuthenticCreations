@@ -213,14 +213,14 @@ function portableText(prefix: string, paragraphs: Para[]) {
 const ABOUT_BODY = portableText('about', [
   {
     text:
-      "Hi — I'm CJ Lavender. I'm an artist, a musician and a therapist, and every one " +
+      "Hi, I'm CJ Lavender. I'm an artist, a musician and a therapist, and every one " +
       'of those turns up in the crochet: the colour sense, the rhythm of the stitches, ' +
       'and the belief that what you wear can help you feel like yourself.',
   },
   {
     text:
       'Everything here is made by hand, one piece at a time. That is where the name ' +
-      'comes from — nothing is mass-produced, nothing is a copy, and no two pieces come ' +
+      'comes from: nothing is mass-produced, nothing is a copy, and no two pieces come ' +
       'out quite the same. If you order a custom piece, it is made for you and nobody else.',
   },
   {
@@ -236,7 +236,7 @@ const POLICIES_BODY = portableText('policies', [
     text:
       'Every piece is made and posted by hand. Ready-made pieces usually go out within ' +
       'a few days. Made-to-order pieces take longer, because they are started once you ' +
-      "order them — I'll email you when yours is on its way. You'll be asked for a " +
+      "order them; I'll email you when yours is on its way. You'll be asked for a " +
       'delivery address at checkout.',
   },
   { style: 'h2', text: 'Returns' },
@@ -249,7 +249,7 @@ const POLICIES_BODY = portableText('policies', [
   { style: 'h2', text: 'Questions' },
   {
     text:
-      'There is a person on the other end of this — me. If anything is unclear, or you ' +
+      'There is a person on the other end of this: me. If anything is unclear, or you ' +
       'need something by a particular date, just ask before you order.',
   },
 ]);

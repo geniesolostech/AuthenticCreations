@@ -20,7 +20,7 @@ const FULL_CIRCLE = {
   title: 'Sold-out stitching circle',
 };
 
-const FULL_MESSAGE = 'this circle is full 💛 — check back for the next one';
+const FULL_MESSAGE = 'this circle is full 💛, check back for the next one';
 
 /**
  * A fresh address per run.
