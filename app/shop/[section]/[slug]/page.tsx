@@ -46,14 +46,17 @@ export default async function ProductDetailPage({
   const { section, slug } = await params;
   if (!isSection(section)) notFound();
 
-  // Guarded the same way as the grid page: a Sanity hiccup renders a 404
-  // rather than an unhandled crash. `getProduct` doesn't otherwise throw for
-  // "not found" (it resolves null), so this only ever catches real outages.
-  let product: Awaited<ReturnType<typeof getProduct>> = null;
+  // Logged and rethrown, deliberately. `getProduct` resolves null for a genuine
+  // miss, so this catch only ever sees a real outage — and answering that with
+  // `notFound()` would put a cacheable "no such product" in front of a product
+  // that exists, outliving the outage by a page lifetime. A throw is a 500:
+  // retryable, and never cached.
+  let product: Awaited<ReturnType<typeof getProduct>>;
   try {
     product = await getProduct(slug);
   } catch (error) {
     console.error('[shop] failed to fetch product from Sanity', error);
+    throw error;
   }
   if (!product || product.section !== section) notFound();
 

@@ -118,17 +118,23 @@ describe('/community/[slug] — a past circle', () => {
   });
 });
 
-describe('/community/[slug] — unknown slugs', () => {
+describe('/community/[slug] — unknown slugs and outages', () => {
   test('calls notFound() for a slug that is not a circle', async () => {
     eventBySlug.mockResolvedValue(null);
 
-    await expect(renderPage('does-not-exist')).rejects.toThrow();
+    // notFound() throws an error carrying Next's 404 digest — the only way to
+    // tell it apart from the page simply blowing up.
+    await expect(renderPage('does-not-exist')).rejects.toThrow('NEXT_HTTP_ERROR_FALLBACK;404');
   });
 
-  test('calls notFound() instead of crashing when Sanity throws', async () => {
+  test('a Sanity outage propagates as an error, not a 404', async () => {
     eventBySlug.mockRejectedValue(new Error('network down'));
 
-    await expect(renderPage('august-circle')).rejects.toThrow();
+    // Deliberately *not* notFound(). A 404 is a statement that this circle does
+    // not exist, and Next is free to cache it — so a few seconds of Sanity
+    // trouble would take a real, RSVP-able circle off the site for a page
+    // lifetime. An error is a 500: retryable, and never cached.
+    await expect(renderPage('august-circle')).rejects.toThrow('network down');
   });
 });
 

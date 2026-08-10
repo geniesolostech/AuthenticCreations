@@ -19,12 +19,23 @@ interface EventPageParams {
   slug: string;
 }
 
+/**
+ * Logs and rethrows, deliberately — the throw is the point.
+ *
+ * Returning null here would funnel a transient Sanity outage into `notFound()`,
+ * and a 404 is a *statement* that this circle does not exist: Next may cache it
+ * and serve it for the rest of the page's lifetime, so a few seconds of
+ * trouble takes a real, RSVP-able circle off the site long after Sanity is
+ * back. An escaping error is a 500 instead — retryable, never cached.
+ * `getEventBySlug` resolves null for a genuine miss, which is the only thing
+ * that should reach `notFound()`.
+ */
 async function fetchEvent(slug: string): Promise<EventDoc | null> {
   try {
     return await getEventBySlug(slug);
   } catch (error) {
     console.error('[community] failed to fetch event from Sanity', error);
-    return null;
+    throw error;
   }
 }
 
