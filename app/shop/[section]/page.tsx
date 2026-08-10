@@ -6,6 +6,7 @@ import { isSoldOut } from '@/lib/inventory-status';
 import { getProducts, type Product } from '@/lib/sanity/queries';
 import { fetchPricesAndStock } from '@/lib/shop/fetch-prices';
 import { isSection } from '@/lib/shop/is-section';
+import { primaryVariationId } from '@/lib/shop/primary-variation-id';
 import { SECTIONS } from '@/lib/constants';
 import type { Section } from '@/lib/types';
 
@@ -18,17 +19,6 @@ const SECTION_TITLES: Record<Section, string> = {
 
 export function generateStaticParams() {
   return SECTIONS.map((section) => ({ section }));
-}
-
-/**
- * The variation id used to price/stock a product tile on the grid: its own
- * base variation, or — for a product that only sells as named variants (e.g.
- * crochet flowers) — its first variant, just to give the tile *some* price.
- * The full variant picker lives on the detail page. Empty when Sanity has no
- * id yet (pre-launch catalog state); those tiles show "Price at checkout".
- */
-function primaryVariationId(product: Product): string {
-  return product.squareVariationId || product.variants?.[0]?.squareVariationId || '';
 }
 
 export default async function ShopSectionPage({

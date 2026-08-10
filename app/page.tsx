@@ -18,6 +18,7 @@ import {
 } from '@/lib/sanity/queries';
 import { urlFor } from '@/lib/sanity/image';
 import { fetchPricesAndStock } from '@/lib/shop/fetch-prices';
+import { primaryVariationId } from '@/lib/shop/primary-variation-id';
 
 export const revalidate = 60;
 
@@ -36,19 +37,41 @@ const ABOUT_TEASER_BODY =
   'CJ Lavender hand-crochets every hat and accessory in this shop, one stitch at a time. Authentic Creations exists to help you find yourself in whatever you make, wear, or do.';
 
 /**
- * The variation id used to price/stock a featured tile — identical to
- * `app/shop/[section]/page.tsx`'s own helper (see its comment): a product's
- * own base variation, or its first named variant when it only sells as
- * variants, so every tile gets *some* price.
+ * Each of these wraps one Sanity read in the same try/catch-to-fallback
+ * pattern as the rest of the app (Tasks 6/7/9/10) and, critically, never
+ * rejects — so the section fetches below can run together in one
+ * `Promise.all` (this is the highest-traffic route; sequential awaits here
+ * would stack every section's latency) while still degrading only the one
+ * section that failed, never the whole page.
  */
-function primaryVariationId(product: Product): string {
-  return product.squareVariationId || product.variants?.[0]?.squareVariationId || '';
+async function fetchAbout(): Promise<AboutPageDoc | null> {
+  try {
+    return await getAboutPage();
+  } catch (error) {
+    console.error('[home] failed to fetch the about page from Sanity', error);
+    return null;
+  }
+}
+
+async function fetchUpcoming(): Promise<EventDoc[]> {
+  try {
+    return await getUpcomingEvents(new Date());
+  } catch (error) {
+    console.error('[home] failed to fetch upcoming events from Sanity', error);
+    return [];
+  }
+}
+
+async function fetchLatestPosts(): Promise<PostSummary[]> {
+  try {
+    return (await getPosts()).slice(0, MAX_POSTS);
+  } catch (error) {
+    console.error('[home] failed to fetch posts from Sanity', error);
+    return [];
+  }
 }
 
 export default async function Home() {
-  // Every Sanity read below is guarded the same way as the rest of the app
-  // (Tasks 6/7/9/10): a hiccup degrades that one section to its empty/fallback
-  // state — never a crashed front door.
   let featured: Product[] = [];
   try {
     featured = (await getFeaturedProducts()).slice(0, MAX_FEATURED);
@@ -56,35 +79,24 @@ export default async function Home() {
     console.error('[home] failed to fetch featured products from Sanity', error);
   }
 
-  // Same call, same "never throws" contract as the shop grid — see
-  // lib/shop/fetch-prices.ts. An empty `ids` array (no featured products, or
-  // none with a priceable variation yet) is a normal input, not a guard case.
+  // Prices need featured's own ids, so that fetch can't join the group
+  // below — but it, and everything below, are otherwise independent of one
+  // another and of `featured`, so they run concurrently rather than as four
+  // more sequential awaits. Same "never throws" contract as the shop grid —
+  // see lib/shop/fetch-prices.ts. An empty `ids` array (no featured
+  // products, or none with a priceable variation yet) is a normal input,
+  // not a guard case.
   const ids = [...new Set(featured.map(primaryVariationId).filter((id) => id !== ''))];
-  const { variations, counts } = await fetchPricesAndStock(ids);
+  const [{ variations, counts }, about, upcoming, posts] = await Promise.all([
+    fetchPricesAndStock(ids),
+    fetchAbout(),
+    fetchUpcoming(),
+    fetchLatestPosts(),
+  ]);
 
-  let about: AboutPageDoc | null = null;
-  try {
-    about = await getAboutPage();
-  } catch (error) {
-    console.error('[home] failed to fetch the about page from Sanity', error);
-  }
-
-  let upcoming: EventDoc[] = [];
-  try {
-    upcoming = await getUpcomingEvents(new Date());
-  } catch (error) {
-    console.error('[home] failed to fetch upcoming events from Sanity', error);
-  }
   // UPCOMING_EVENTS_QUERY already orders by startsAt ascending, so the first
   // entry is the single soonest circle.
   const nextEvent = upcoming[0] ?? null;
-
-  let posts: PostSummary[] = [];
-  try {
-    posts = (await getPosts()).slice(0, MAX_POSTS);
-  } catch (error) {
-    console.error('[home] failed to fetch posts from Sanity', error);
-  }
 
   const aboutHeading = about?.heading || ABOUT_FALLBACK_HEADING;
   const aboutPhotoUrl = about?.photo?.asset
