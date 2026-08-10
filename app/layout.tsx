@@ -8,7 +8,14 @@ import { CartProvider } from "@/lib/cart-context";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Authentic Creations",
+  // Resolves relative URLs in metadata (e.g. the opengraph-image route) to
+  // absolute ones; falls back to localhost so this never throws in dev/test
+  // when the env var isn't set.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
+  title: {
+    default: "Authentic Creations",
+    template: "%s · Authentic Creations",
+  },
   description:
     "Handmade crochet hats & accessories by CJ Lavender. Find you in whatever you do.",
 };

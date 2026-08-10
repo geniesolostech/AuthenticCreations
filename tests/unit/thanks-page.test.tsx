@@ -9,6 +9,12 @@ beforeEach(() => {
 });
 
 describe('/thanks', () => {
+  test('is not indexed by search engines', () => {
+    renderWithCart(<ThanksPage />);
+
+    expect(document.querySelector('meta[name="robots"]')).toHaveAttribute('content', 'noindex');
+  });
+
   test('empties a cart that the provider hydrated from storage', () => {
     renderWithCart(<ThanksPage />, [makeLine(), makeLine({ variationId: 'var-2', quantity: 3 })]);
 

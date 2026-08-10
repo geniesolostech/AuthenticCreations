@@ -27,6 +27,11 @@ export default function ThanksPage() {
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-16 sm:px-6">
+      {/* Same rationale as app/cart/page.tsx: a client component can't export
+          `metadata`, so the noindex tag is rendered directly and hoisted into
+          <head> by React 19. A one-time receipt page has nothing to offer a
+          search index. */}
+      <meta name="robots" content="noindex" />
       <h1 className="font-heading text-3xl text-charcoal sm:text-4xl">Thank you!</h1>
       <p className="font-script text-2xl text-rust">Find you in whatever you do.</p>
       <p className="font-body text-charcoal">

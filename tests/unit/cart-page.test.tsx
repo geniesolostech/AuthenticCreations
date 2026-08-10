@@ -21,6 +21,12 @@ afterEach(() => {
 });
 
 describe('/cart', () => {
+  test('is not indexed by search engines', () => {
+    renderWithCart(<CartPage />);
+
+    expect(document.querySelector('meta[name="robots"]')).toHaveAttribute('content', 'noindex');
+  });
+
   test('empty cart shows the cozy empty state and links to both shop sections', () => {
     renderWithCart(<CartPage />);
 
