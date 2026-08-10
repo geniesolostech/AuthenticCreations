@@ -25,12 +25,6 @@ export function generateStaticParams() {
   return SECTIONS.map((section) => ({ section }));
 }
 
-/** Narrows to products that actually have a custom Square variation set up
- * (pre-launch catalog state can leave this empty for some/all products). */
-function hasCustomVariation(product: Product): product is Product & { customSquareVariationId: string } {
-  return !!product.customSquareVariationId;
-}
-
 export default async function CustomOrderPage({
   params,
 }: {
@@ -48,20 +42,28 @@ export default async function CustomOrderPage({
     console.error('[shop] failed to fetch products from Sanity', error);
   }
 
-  const customizable = products.filter(hasCustomVariation);
-
-  const ids = [...new Set(customizable.map((product) => product.customSquareVariationId))];
+  // Every product in the section gets a card, custom SKU or not (pre-launch
+  // catalog state can leave `customSquareVariationId` empty for some/all of
+  // them) — only products that have one need a price lookup.
+  const ids = [
+    ...new Set(
+      products
+        .map((product) => product.customSquareVariationId)
+        .filter((id): id is string => !!id),
+    ),
+  ];
   const { variations } = await fetchPricesAndStock(ids);
 
-  const options: CustomProductOption[] = customizable.map((product) => {
-    const info = variations.get(product.customSquareVariationId);
+  const options: CustomProductOption[] = products.map((product) => {
+    const customVariationId = product.customSquareVariationId ?? null;
+    const info = customVariationId ? variations.get(customVariationId) : undefined;
     const photo = product.photos?.[0];
     return {
       id: product._id,
       title: product.title,
-      customVariationId: product.customSquareVariationId,
+      customVariationId,
       priceCents: info?.priceCents ?? null,
-      imageUrl: photo?.asset ? urlFor(photo).width(600).height(600).fit('crop').auto('format').url() : undefined,
+      imageUrl: photo?.asset ? urlFor(photo).width(300).height(300).fit('crop').auto('format').url() : undefined,
     };
   });
 
@@ -77,8 +79,7 @@ export default async function CustomOrderPage({
       {options.length === 0 ? (
         <div className="mt-8 flex flex-col items-start gap-3">
           <p className="font-body text-charcoal">
-            We don&apos;t have any custom {SECTION_TITLES[section].toLowerCase()} to start from just
-            yet — check back soon, or browse what&apos;s ready to ship today.
+            We don&apos;t have any {SECTION_TITLES[section].toLowerCase()} yet. Check back soon.
           </p>
           <Link href={`/shop/${section}`} className="font-body text-sm font-semibold text-rust hover:underline">
             ← Back to {SECTION_TITLES[section]}

@@ -28,6 +28,7 @@ function readLines(): unknown[] {
 const products: CustomProductOption[] = [
   { id: 'p1', title: 'Custom Beanie', customVariationId: 'cust-beanie-1', priceCents: 4500 },
   { id: 'p2', title: 'Custom Scarf', customVariationId: 'cust-scarf-1', priceCents: 6000 },
+  { id: 'p3', title: 'Custom Mittens', customVariationId: null, priceCents: null },
 ];
 
 beforeEach(() => {
@@ -113,16 +114,79 @@ describe('CustomOrderForm', () => {
     15000,
   );
 
-  test('changing the product select updates the displayed price', async () => {
+  test('the product picker is a labelled radiogroup of cards, one per product', () => {
+    renderWithCart(<CustomOrderForm products={products} />);
+
+    const group = screen.getByRole('radiogroup');
+    expect(group).toHaveAccessibleName(/choose a piece/i);
+
+    const cards = screen.getAllByRole('radio');
+    expect(cards).toHaveLength(3);
+    expect(screen.getByRole('radio', { name: /custom beanie/i })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: /custom scarf/i })).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByRole('radio', { name: /custom mittens/i })).toHaveAttribute('aria-checked', 'false');
+  });
+
+  test('clicking a product card selects it and switches the displayed price', async () => {
     const user = userEvent.setup();
     renderWithCart(<CustomOrderForm products={products} />);
 
-    expect(screen.getByText('$45.00')).toBeInTheDocument();
+    // The big price display below the grid is the <p>; per-card prices are <span>s.
+    expect(screen.getByText('$45.00', { selector: 'p' })).toBeInTheDocument();
 
-    await user.selectOptions(screen.getByLabelText(/choose a piece/i), 'p2');
+    await user.click(screen.getByRole('radio', { name: /custom scarf/i }));
 
-    expect(screen.getByText('$60.00')).toBeInTheDocument();
-    expect(screen.queryByText('$45.00')).not.toBeInTheDocument();
+    expect(screen.getByText('$60.00', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.queryByText('$45.00', { selector: 'p' })).not.toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /custom scarf/i })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: /custom beanie/i })).toHaveAttribute('aria-checked', 'false');
+  });
+
+  test('a product card can be selected via the keyboard', async () => {
+    const user = userEvent.setup();
+    renderWithCart(<CustomOrderForm products={products} />);
+
+    const scarfCard = screen.getByRole('radio', { name: /custom scarf/i });
+    scarfCard.focus();
+    await user.keyboard('{Enter}');
+
+    expect(scarfCard).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByText('$60.00', { selector: 'p' })).toBeInTheDocument();
+  });
+
+  test('selecting a product with no custom SKU shows "Price at checkout" and disables Add to Cart', async () => {
+    const user = userEvent.setup();
+    renderWithCart(<CustomOrderForm products={products} />);
+
+    await user.click(screen.getByRole('radio', { name: /custom mittens/i }));
+
+    expect(screen.getAllByText('Price at checkout').length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: /add to cart/i })).toBeDisabled();
+
+    // Color and comments stay usable even though the piece has no price yet.
+    await user.click(screen.getByRole('button', { name: 'Red' }));
+    expect(screen.getByRole('button', { name: 'Red' })).toHaveAttribute('aria-pressed', 'true');
+    await user.type(screen.getByLabelText(/tell us what you have in mind/i), 'Mittens please');
+    expect(screen.getByLabelText(/tell us what you have in mind/i)).toHaveValue('Mittens please');
+  });
+
+  test('a product with a custom SKU adds the exact cart line once selected via its card', async () => {
+    const user = userEvent.setup();
+    renderWithCart(<CustomOrderForm products={products} />);
+
+    await user.click(screen.getByRole('radio', { name: /custom scarf/i }));
+    await user.click(screen.getByRole('button', { name: 'Green' }));
+    await user.click(screen.getByRole('button', { name: /add to cart/i }));
+
+    const lines = readLines();
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({
+      variationId: 'cust-scarf-1',
+      name: 'Custom — Custom Scarf',
+      unitAmount: 6000,
+      quantity: 1,
+      custom: { color: 'Green', comments: '' },
+    });
   });
 
   test('fires cart:open on successful add', async () => {

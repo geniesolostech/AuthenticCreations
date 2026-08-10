@@ -128,11 +128,27 @@ test.describe('shop', () => {
     await gotoHydrated(page, '/shop/hats/custom');
 
     await expect(page.getByRole('heading', { level: 1, name: 'Custom Hats' })).toBeVisible();
-    await expect(page.getByText(RUFFLED_HAT.customPrice)).toBeVisible();
+
+    // Every product in the section gets a card, not just the customizable ones.
+    const ruffledCard = page.getByRole('radio', { name: new RegExp(RUFFLED_HAT.name, 'i') });
+    const beanieCard = page.getByRole('radio', { name: new RegExp(BEANIE.name, 'i') });
+    await expect(ruffledCard).toBeVisible();
+    await expect(beanieCard).toBeVisible();
+
+    // The beanie fixture has no custom SKU: picking it shows "price at
+    // checkout" and Add to Cart stays disabled, same as everywhere else.
+    await beanieCard.click();
+    await expect(page.getByTestId('custom-price')).toHaveText('Price at checkout');
+    await expect(page.getByRole('button', { name: 'Add to Cart' })).toBeDisabled();
+
+    // Selecting the customizable piece brings back its fixed custom price.
+    await ruffledCard.click();
+    await expect(page.getByTestId('custom-price')).toHaveText(RUFFLED_HAT.customPrice);
 
     const comments = 'a wide brim please, and a little slouch';
     await page.getByRole('button', { name: 'Blue' }).click();
     await page.locator('#custom-comments').fill(comments);
+    await expect(page.getByRole('button', { name: 'Add to Cart' })).toBeEnabled();
     await page.getByRole('button', { name: 'Add to Cart' }).click();
 
     // The cart line says who it is for and what was asked for.

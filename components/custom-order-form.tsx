@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react';
 
 import ColorSwatchPicker from '@/components/color-swatch-picker';
+import PlaceholderImage from '@/components/placeholder-image';
 import { useCart } from '@/lib/cart-context';
 import { CUSTOM_COMMENTS_MAX } from '@/lib/constants';
 import { formatMoney } from '@/lib/money';
@@ -11,9 +12,13 @@ import type { CustomColor } from '@/lib/types';
 export interface CustomProductOption {
   id: string;
   title: string;
-  /** The Square variation id for this product's fixed custom price. */
-  customVariationId: string;
-  /** `null` when Square couldn't be reached at render time. */
+  /** The Square variation id for this product's fixed custom price, or
+   * `null` when this product has no custom SKU set up yet (pre-launch
+   * catalog state can leave this empty for some/all of a section's products). */
+  customVariationId: string | null;
+  /** `null` when there's no variation id above, or Square couldn't be
+   * reached at render time. Either way the card shows "Price at checkout"
+   * and Add to Cart stays disabled for it. */
   priceCents: number | null;
   imageUrl?: string;
 }
@@ -53,7 +58,7 @@ export default function CustomOrderForm({ products }: CustomOrderFormProps) {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (priceUnknown) return;
+    if (priceUnknown || selected.customVariationId === null) return;
     if (color === null) {
       setShowColorError(true);
       return;
@@ -74,22 +79,51 @@ export default function CustomOrderForm({ products }: CustomOrderFormProps) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <label htmlFor="custom-product" className="font-body text-sm font-semibold text-charcoal">
+        <p id="custom-product-heading" className="font-body text-sm font-semibold text-charcoal">
           Choose a piece
-        </label>
-        <select
-          id="custom-product"
-          value={productId}
-          onChange={(event) => setProductId(event.target.value)}
-          className="rounded-lg border border-khaki bg-cream px-3 py-2 font-body text-charcoal"
+        </p>
+        <div
+          role="radiogroup"
+          aria-labelledby="custom-product-heading"
+          className="grid grid-cols-2 gap-3 sm:grid-cols-3"
         >
-          {products.map((product) => (
-            <option key={product.id} value={product.id}>
-              {product.title}
-            </option>
-          ))}
-        </select>
-        <p className="font-heading text-xl text-charcoal">
+          {products.map((product) => {
+            const isSelected = product.id === productId;
+            const cardPriceUnknown = product.priceCents === null;
+            return (
+              <button
+                key={product.id}
+                type="button"
+                role="radio"
+                aria-checked={isSelected}
+                onClick={() => setProductId(product.id)}
+                className={`flex flex-col overflow-hidden rounded-xl border-2 bg-cream text-left transition ${
+                  isSelected ? 'border-rust ring-2 ring-rust/40' : 'border-khaki hover:border-rust'
+                }`}
+              >
+                <div className="aspect-square w-full overflow-hidden bg-linen">
+                  {product.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- see components/product-card.tsx
+                    <img
+                      src={product.imageUrl}
+                      alt={product.title}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <PlaceholderImage title={product.title} />
+                  )}
+                </div>
+                <div className="flex flex-col gap-0.5 px-2 py-2">
+                  <span className="font-body text-sm font-semibold text-charcoal">{product.title}</span>
+                  <span className="font-body text-sm text-khaki">
+                    {cardPriceUnknown ? 'Price at checkout' : formatMoney(product.priceCents as number)}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        <p data-testid="custom-price" className="font-heading text-xl text-charcoal">
           {priceUnknown ? 'Price at checkout' : formatMoney(selected.priceCents as number)}
         </p>
       </div>

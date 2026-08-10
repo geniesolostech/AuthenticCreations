@@ -127,6 +127,11 @@ export default defineConfig({
       // to build a payment link without it, so a developer whose .env.local
       // lacks it would see the checkout spec fail for the wrong reason.
       NEXT_PUBLIC_SITE_URL: BASE_URL,
+      // A dist dir of its own (see next.config.ts): Next 16 locks one dev
+      // server per dist dir regardless of port, so without this, this
+      // webServer refuses to start whenever a `npm run dev` is already
+      // running on the default `.next` dir.
+      NEXT_DIST_DIR: 'node_modules/.next-e2e',
     },
   },
 });

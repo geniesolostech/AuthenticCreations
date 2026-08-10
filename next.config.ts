@@ -81,7 +81,12 @@ assertSiteUrl();
 assertSanityProjectId();
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Next 16 locks one dev server per `distDir` (regardless of port), so the
+  // E2E suite's own `next dev` (playwright.config.ts) can't start while a
+  // developer's `npm run dev` is already running on the default `.next` dir.
+  // Playwright sets this to a directory of its own so both can run at once;
+  // everyone else gets the default.
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
 };
 
 export default nextConfig;
