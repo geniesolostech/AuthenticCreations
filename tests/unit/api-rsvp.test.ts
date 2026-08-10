@@ -3,31 +3,49 @@
  * Route-handler tests for `POST /api/rsvp` — the one place in the app that
  * writes to Sanity.
  *
- * The handler is called directly with a `Request`; the Sanity query helpers and
- * the write client are module-mocked, so this exercises the real dep-wiring
- * (including the exact rsvp document shape) without a network or a token. Node
- * environment, because jsdom has no `Request`/`Response`.
+ * The handler is called directly with a `Request`; the Sanity *client module* is
+ * mocked — not the query helpers — so this exercises the real dep-wiring
+ * (including which client each read goes through and the exact rsvp document
+ * shape) without a network or a token. Node environment, because jsdom has no
+ * `Request`/`Response`.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@/lib/sanity/queries', () => ({
-  getEventBySlug: vi.fn(),
-  getRsvpCount: vi.fn(),
-  findRsvp: vi.fn(),
-}));
+const sanity = vi.hoisted(() => {
+  /** Reads made through the non-CDN client the route is supposed to build. */
+  const freshFetch = vi.fn();
+  /** Reads made straight through the CDN client — always a bug in this route. */
+  const cdnFetch = vi.fn();
+  /**
+   * Every config the route asked `withConfig` for, kept outside the mock's own
+   * call history: `withConfig` runs once at module load, and `clearAllMocks`
+   * between tests would otherwise erase the only evidence of it.
+   */
+  const configs: unknown[] = [];
+  const withConfig = vi.fn((config: unknown) => {
+    configs.push(config);
+    return { fetch: freshFetch };
+  });
+  return { freshFetch, cdnFetch, withConfig, configs, create: vi.fn() };
+});
 
 vi.mock('@/lib/sanity/client', () => ({
-  sanityWriteClient: { create: vi.fn() },
+  sanityClient: { fetch: sanity.cdnFetch, withConfig: sanity.withConfig },
+  sanityWriteClient: { create: sanity.create },
 }));
 
 import { POST } from '@/app/api/rsvp/route';
-import { sanityWriteClient } from '@/lib/sanity/client';
-import { findRsvp, getEventBySlug, getRsvpCount } from '@/lib/sanity/queries';
+import { EVENT_BY_SLUG_QUERY, FIND_RSVP_QUERY, RSVP_COUNT_QUERY } from '@/lib/sanity/queries';
 
-const getEvent = vi.mocked(getEventBySlug);
-const countRsvps = vi.mocked(getRsvpCount);
-const findExisting = vi.mocked(findRsvp);
-const createDoc = vi.mocked(sanityWriteClient.create);
+/**
+ * The three logical reads, behind the one `fetch` the route actually calls.
+ * Routing by query string keeps each test able to say "the event lookup
+ * answers X" without caring how the route spells the request.
+ */
+const getEvent = vi.fn();
+const countRsvps = vi.fn();
+const findExisting = vi.fn();
+const createDoc = sanity.create;
 
 const SITE_URL = 'https://authentic-creations.test';
 
@@ -56,7 +74,15 @@ beforeEach(() => {
   getEvent.mockResolvedValue(UPCOMING_EVENT);
   countRsvps.mockResolvedValue(0);
   findExisting.mockResolvedValue(null);
-  createDoc.mockResolvedValue({ _id: 'rsvp-1' } as never);
+  createDoc.mockResolvedValue({ _id: 'rsvp-1' });
+
+  sanity.freshFetch.mockImplementation((query: string, params: Record<string, string>) => {
+    if (query === EVENT_BY_SLUG_QUERY) return getEvent(params.slug);
+    if (query === RSVP_COUNT_QUERY) return countRsvps(params.eventId);
+    if (query === FIND_RSVP_QUERY) return findExisting(params.eventId, params.email);
+    throw new Error(`unexpected query: ${query}`);
+  });
+
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
 
@@ -110,6 +136,42 @@ describe('POST /api/rsvp — 201 CREATED', () => {
     expect(doc._type).toBe('rsvp');
     expect(doc).not.toHaveProperty('_id');
     expect(doc).not.toHaveProperty('capacity');
+  });
+});
+
+describe('POST /api/rsvp — reads must see this endpoint’s own writes', () => {
+  it('builds its reads on a non-CDN client', () => {
+    // The write client is `useCdn: false`; a CDN-backed read here would let an
+    // edge that has not caught up report a fresh RSVP as missing and a full
+    // circle as roomy.
+    expect(sanity.configs).toContainEqual({ useCdn: false });
+  });
+
+  it('never reads through the CDN client itself', async () => {
+    await POST(post({ ...VALID_BODY, eventSlug: 'august-circle' }));
+
+    expect(sanity.cdnFetch).not.toHaveBeenCalled();
+    expect(sanity.freshFetch).toHaveBeenCalled();
+  });
+
+  it('routes all three reads — event, duplicate, count — through that client', async () => {
+    getEvent.mockResolvedValue({ ...UPCOMING_EVENT, capacity: 8 });
+
+    await POST(post(VALID_BODY));
+
+    const queries = sanity.freshFetch.mock.calls.map(([query]) => query);
+    expect(queries).toEqual([EVENT_BY_SLUG_QUERY, FIND_RSVP_QUERY, RSVP_COUNT_QUERY]);
+    expect(sanity.cdnFetch).not.toHaveBeenCalled();
+  });
+
+  it('treats an undefined duplicate lookup as a miss, not as "already signed up"', async () => {
+    // A strict `!== null` here would turn every RSVP into a permanent 409.
+    findExisting.mockResolvedValue(undefined);
+
+    const response = await POST(post(VALID_BODY));
+
+    expect(response.status).toBe(201);
+    expect(createDoc).toHaveBeenCalledTimes(1);
   });
 });
 

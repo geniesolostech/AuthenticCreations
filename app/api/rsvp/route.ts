@@ -11,8 +11,14 @@
  */
 import { rsvpBodySchema } from '@/lib/api-schemas';
 import { submitRsvp, type RsvpDeps, type RsvpResult } from '@/lib/rsvp-service';
-import { sanityWriteClient } from '@/lib/sanity/client';
-import { findRsvp, getEventBySlug, getRsvpCount } from '@/lib/sanity/queries';
+import { sanityClient, sanityWriteClient } from '@/lib/sanity/client';
+import {
+  EVENT_BY_SLUG_QUERY,
+  FIND_RSVP_QUERY,
+  RSVP_COUNT_QUERY,
+  type EventDoc,
+  type Rsvp,
+} from '@/lib/sanity/queries';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,15 +41,32 @@ const STATUS: Record<RsvpResult, number> = {
 };
 
 /**
- * Task 3's read helpers plus the write client, adapted to the service's
- * dependency shape. Constructed once at module load — none of these read
- * secrets eagerly (the write token is only used when a request is made), so
- * unlike the Square gateway this needs no lazy singleton.
+ * The reads this endpoint's decisions rest on, deliberately **not** through the
+ * CDN-cached `sanityClient` that pages use.
+ *
+ * `sanityWriteClient` writes with `useCdn: false`, so a CDN-backed read here
+ * would mean the endpoint cannot see its own writes: an edge that has not yet
+ * caught up would report an RSVP as missing and a full circle as having room,
+ * stretching the check→create window out to CDN purge lag. Same project, same
+ * dataset, same public queries — only the caching is different, which is why
+ * this reuses Task 3's exported query strings rather than its helpers (those
+ * stay on the CDN client, which is right for pages).
+ */
+const freshClient = sanityClient.withConfig({ useCdn: false });
+
+/**
+ * Those reads plus the write, adapted to the service's dependency shape.
+ * Constructed once at module load — none of these read secrets eagerly (the
+ * write token is only used when a request is made), so unlike the Square
+ * gateway this needs no lazy singleton.
  */
 const sanityDeps: RsvpDeps = {
-  getEvent: (slug) => getEventBySlug(slug),
-  countRsvps: (eventId) => getRsvpCount(eventId),
-  emailExists: async (eventId, email) => (await findRsvp(eventId, email)) !== null,
+  getEvent: (slug) => freshClient.fetch<EventDoc | null>(EVENT_BY_SLUG_QUERY, { slug }),
+  countRsvps: (eventId) => freshClient.fetch<number>(RSVP_COUNT_QUERY, { eventId }),
+  // `!= null`, not `!== null`: a lookup that answers `undefined` is a miss, and
+  // treating it as a hit would silently refuse every RSVP as a duplicate.
+  emailExists: async (eventId, email) =>
+    (await freshClient.fetch<Rsvp | null>(FIND_RSVP_QUERY, { eventId, email })) != null,
   create: async ({ eventId, name, email }) => {
     await sanityWriteClient.create({
       _type: 'rsvp',
