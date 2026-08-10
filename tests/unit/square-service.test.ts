@@ -202,6 +202,44 @@ describe('createCheckout', () => {
     expect(note).toBe(prefix + comments);
   });
 
+  it('truncates a note that is one character over the limit', async () => {
+    const gw = shopGateway();
+    const prefix = 'Custom order — Color: Green. ';
+    const comments = 'z'.repeat(SQUARE_LINE_ITEM_NOTE_MAX - prefix.length + 1);
+    const cart = [
+      line({ variationId: 'var-custom', unitAmount: 6000, custom: { color: 'Green', comments } }),
+    ];
+
+    await createCheckout(cart, gw);
+
+    const note = gw.calls.createPaymentLink[0].lineItems[0].note!;
+    expect(note).toHaveLength(SQUARE_LINE_ITEM_NOTE_MAX);
+    expect(note).toBe((prefix + comments).slice(0, SQUARE_LINE_ITEM_NOTE_MAX));
+  });
+
+  it('never splits a surrogate pair when truncating', async () => {
+    const gw = shopGateway();
+    // Emoji are two UTF-16 code units each, so a naive slice would land mid-pair.
+    const cart = [
+      line({
+        variationId: 'var-custom',
+        unitAmount: 6000,
+        custom: { color: 'Green', comments: '🧶'.repeat(SQUARE_LINE_ITEM_NOTE_MAX) },
+      }),
+    ];
+
+    await createCheckout(cart, gw);
+
+    const note = gw.calls.createPaymentLink[0].lineItems[0].note!;
+    expect(note.length).toBeLessThanOrEqual(SQUARE_LINE_ITEM_NOTE_MAX);
+    expect([...note].length).toBeLessThanOrEqual(SQUARE_LINE_ITEM_NOTE_MAX);
+    const lone = [...note].filter((char) => {
+      const code = char.codePointAt(0)!;
+      return code >= 0xd800 && code <= 0xdfff;
+    });
+    expect(lone).toEqual([]);
+  });
+
   it('returns SOLD_OUT with the offending ids when a tracked count is below the requested qty', async () => {
     const gw = shopGateway().withCount('var-ready', 1);
     const cart = [line({ variationId: 'var-ready', quantity: 2 })];
