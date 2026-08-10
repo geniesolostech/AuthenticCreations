@@ -128,4 +128,54 @@ describe('RichText', () => {
     const { container } = render(<RichText value={undefined} />);
     expect(container).toBeEmptyDOMElement();
   });
+
+  describe('link href sanitization', () => {
+    function linkBlock(href: string): PortableTextBlock[] {
+      return [
+        {
+          _type: 'block',
+          _key: 'p',
+          style: 'normal',
+          markDefs: [{ _type: 'link', _key: 'l', href }],
+          children: [{ _type: 'span', _key: 'ps', text: 'click here', marks: ['l'] }],
+        },
+      ];
+    }
+
+    test('a javascript: href is neutralized to "#"', () => {
+      render(<RichText value={linkBlock('javascript:alert(1)')} />);
+      expect(screen.getByRole('link', { name: 'click here' })).toHaveAttribute('href', '#');
+    });
+
+    test('a data: href is neutralized to "#"', () => {
+      render(<RichText value={linkBlock('data:text/html,<script>alert(1)</script>')} />);
+      expect(screen.getByRole('link', { name: 'click here' })).toHaveAttribute('href', '#');
+    });
+
+    test('a vbscript: href is neutralized to "#"', () => {
+      render(<RichText value={linkBlock('vbscript:msgbox(1)')} />);
+      expect(screen.getByRole('link', { name: 'click here' })).toHaveAttribute('href', '#');
+    });
+
+    test('a scheme disguised with an embedded tab is still caught (browsers strip it before parsing)', () => {
+      render(<RichText value={linkBlock('java\tscript:alert(1)')} />);
+      expect(screen.getByRole('link', { name: 'click here' })).toHaveAttribute('href', '#');
+    });
+
+    test.each(['http://example.com', 'https://example.com', 'mailto:hello@example.com', 'tel:+15555550123'])(
+      'an allowed scheme (%s) passes through unchanged',
+      (href) => {
+        render(<RichText value={linkBlock(href)} />);
+        expect(screen.getByRole('link', { name: 'click here' })).toHaveAttribute('href', href);
+      },
+    );
+
+    test.each(['/shop/hats', '#section', '?query=1', 'shop/hats'])(
+      'a relative href (%s, no scheme) passes through unchanged',
+      (href) => {
+        render(<RichText value={linkBlock(href)} />);
+        expect(screen.getByRole('link', { name: 'click here' })).toHaveAttribute('href', href);
+      },
+    );
+  });
 });
