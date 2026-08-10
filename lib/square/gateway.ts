@@ -92,31 +92,39 @@ export function realGateway(): SquareGateway {
     },
 
     async getInventoryCounts(ids: string[]): Promise<Map<string, number>> {
-      const out = new Map<string, number>();
-      if (ids.length === 0) return out;
+      if (ids.length === 0) return new Map<string, number>();
 
-      const page = await call('inventory.batchGetCounts', () =>
-        client.inventory.batchGetCounts({
+      // The whole read — request, error check and pagination — runs inside
+      // `call()`. `batchGetCounts` returns a lazy paginated iterator, so pages
+      // after the first are fetched during the loop below; leaving the loop
+      // outside the wrapper would let a mid-pagination failure escape as a raw
+      // SDK error, breaking the containment contract in ./errors.ts.
+      return call('inventory.batchGetCounts', async () => {
+        const page = await client.inventory.batchGetCounts({
           catalogObjectIds: ids,
           locationIds: [locationId],
           states: ['IN_STOCK'],
-        }),
-      );
+        });
+        // Square can return 200 with partial errors. Dropping those would yield
+        // a short count map, and a missing id reads downstream as "untracked",
+        // i.e. always available — so a partial failure would fail OPEN. Throw.
+        throwOnErrors('inventory.batchGetCounts', page.response.errors);
 
-      // `batchGetCounts` returns a paginated iterator; untracked variations
-      // simply have no IN_STOCK row and so never appear in the result.
-      for await (const count of page) {
-        if (count.state !== 'IN_STOCK') continue;
-        if (count.locationId !== locationId) continue;
-        const id = count.catalogObjectId;
-        if (!id) continue;
-        const quantity = Number(count.quantity);
-        if (!Number.isFinite(quantity)) continue;
-        // Quantity is a decimal string; floor so a partial unit never reads as
-        // sellable stock.
-        out.set(id, Math.floor(quantity));
-      }
-      return out;
+        const out = new Map<string, number>();
+        // Untracked variations simply have no IN_STOCK row and so never appear.
+        for await (const count of page) {
+          if (count.state !== 'IN_STOCK') continue;
+          if (count.locationId !== locationId) continue;
+          const id = count.catalogObjectId;
+          if (!id) continue;
+          const quantity = Number(count.quantity);
+          if (!Number.isFinite(quantity)) continue;
+          // Quantity is a decimal string; floor so a partial unit never reads as
+          // sellable stock.
+          out.set(id, Math.floor(quantity));
+        }
+        return out;
+      });
     },
 
     async createPaymentLink(input): Promise<{ url: string }> {
@@ -132,7 +140,16 @@ export function realGateway(): SquareGateway {
               ...(item.note === undefined ? {} : { note: item.note }),
             })),
           },
-          checkoutOptions: { redirectUrl: input.redirectUrl },
+          checkoutOptions: {
+            redirectUrl: input.redirectUrl,
+            // These are physical goods that get posted to the buyer, so the
+            // hosted page must collect an address; without it every order
+            // arrives unfulfillable.
+            askForShippingAddress: true,
+            // `shippingFee` is deliberately unset: whether to charge for
+            // postage, and how much, is a product decision deferred to
+            // docs/launch-runbook.md.
+          },
         }),
       );
       throwOnErrors('checkout.paymentLinks.create', response.errors);
@@ -158,6 +175,8 @@ async function call<T>(label: string, fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
   } catch (error) {
+    // Already contained, and carrying a more specific message — don't bury it.
+    if (error instanceof SquareGatewayError) throw error;
     throw new SquareGatewayError(`Square ${label} failed`, { cause: error });
   }
 }
