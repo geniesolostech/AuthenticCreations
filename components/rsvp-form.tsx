@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { CIRCLE_FULL_MESSAGE, CIRCLE_MET_MESSAGE } from '@/lib/events';
 import {
@@ -62,6 +62,24 @@ const BY_STATUS: Record<number, Outcome> = {
   429: 'throttled',
 };
 
+/** Which field a 400 is about, if we can tell from here. `null` means we can't. */
+type OffendingField = 'name' | 'email' | null;
+
+/**
+ * The one rule for reading a 400, used twice: to decide which hint to show and
+ * to decide where focus should land. Two copies of it would drift, and the
+ * drift would be a hint pointing at one field while the cursor sits in another.
+ *
+ * Only ever consulted after the server has said no — guessing at validity while
+ * someone is still typing is nagging, not helping.
+ */
+function offendingField(outcome: Outcome | null, name: string, email: string): OffendingField {
+  if (outcome !== 'invalid') return null;
+  if (!isValidRsvpName(name)) return 'name';
+  if (!isValidRsvpEmail(email)) return 'email';
+  return null;
+}
+
 export interface RsvpFormProps {
   eventSlug: string;
 }
@@ -77,13 +95,40 @@ export default function RsvpForm({ eventSlug }: RsvpFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
 
-  // Only shown after a 400 — the server is the one that decides validity, and
-  // guessing at it while someone is still typing is nagging, not helping.
-  const nameHint = outcome === 'invalid' && !isValidRsvpName(name);
-  const emailHint = outcome === 'invalid' && !nameHint && !isValidRsvpEmail(email);
-  // A banner only when there's no field to point at: a hiccup, or a 400 whose
-  // cause we cannot see from here (both fields look fine to these same rules).
-  const banner = outcome !== null && !nameHint && !emailHint ? MESSAGES[outcome] : null;
+  const outcomeRef = useRef<HTMLDivElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  /**
+   * Where focus goes when the next answer lands, decided when the answer is
+   * *read* rather than when it renders. Derived state would be re-derived on
+   * every keystroke, and the effect below would then chase a hint that
+   * disappears as the visitor fixes their address — pulling the cursor out of
+   * the field they are typing in.
+   */
+  const focusTargetRef = useRef<OffendingField>(null);
+
+  const hintField = offendingField(outcome, name, email);
+  const nameHint = hintField === 'name';
+  const emailHint = hintField === 'email';
+  // The announcement is the message itself, except when there is a field to
+  // point at — then the hint beside that field says it better.
+  const announcement = outcome !== null && hintField === null ? MESSAGES[outcome] : null;
+  const terminal = outcome !== null && TERMINAL.has(outcome);
+
+  // Focus follows the answer. Both inputs are disabled while the POST is in
+  // flight, which drops focus to <body>, and a terminal answer takes the whole
+  // form away — so without this a keyboard or screen-reader visitor is left
+  // standing nowhere, with nothing announced.
+  useEffect(() => {
+    if (outcome === null) return;
+    const target =
+      focusTargetRef.current === 'name'
+        ? nameRef.current
+        : focusTargetRef.current === 'email'
+          ? emailRef.current
+          : outcomeRef.current;
+    target?.focus();
+  }, [outcome]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -91,6 +136,12 @@ export default function RsvpForm({ eventSlug }: RsvpFormProps) {
 
     setSubmitting(true);
     setOutcome(null);
+
+    function settle(next: Outcome) {
+      focusTargetRef.current = offendingField(next, name, email);
+      setOutcome(next);
+      setSubmitting(false);
+    }
 
     let response: Response;
     try {
@@ -101,91 +152,103 @@ export default function RsvpForm({ eventSlug }: RsvpFormProps) {
       });
     } catch (error) {
       console.error('[rsvp] request failed', error);
-      setOutcome('hiccup');
-      setSubmitting(false);
+      settle('hiccup');
       return;
     }
 
     // The status carries the whole answer; the body is only ever a repeat of
     // it, so an unreadable one changes nothing.
-    setOutcome(BY_STATUS[response.status] ?? 'hiccup');
-    setSubmitting(false);
-  }
-
-  if (outcome !== null && TERMINAL.has(outcome)) {
-    return (
-      <p
-        role="status"
-        className="rounded-xl bg-linen px-4 py-3 font-body text-charcoal"
-      >
-        {MESSAGES[outcome]}
-      </p>
-    );
+    settle(BY_STATUS[response.status] ?? 'hiccup');
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      {banner !== null && (
-        <p role="alert" className="rounded-xl bg-linen px-4 py-3 font-body text-sm text-charcoal">
-          {banner}
-        </p>
-      )}
-
-      <div className="flex flex-col gap-2">
-        <label htmlFor="rsvp-name" className="font-body text-sm font-semibold text-charcoal">
-          Your name
-        </label>
-        <input
-          id="rsvp-name"
-          name="name"
-          type="text"
-          required
-          maxLength={RSVP_NAME_MAX}
-          autoComplete="name"
-          value={name}
-          disabled={submitting}
-          onChange={(event) => setName(event.target.value)}
-          aria-describedby={nameHint ? 'rsvp-name-hint' : undefined}
-          className="rounded-lg border border-khaki bg-cream px-3 py-2 font-body text-charcoal disabled:opacity-60"
-        />
-        {nameHint && (
-          <p id="rsvp-name-hint" role="alert" className="font-body text-sm text-rust">
-            {FIELD_HINTS.name}
-          </p>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label htmlFor="rsvp-email" className="font-body text-sm font-semibold text-charcoal">
-          Email
-        </label>
-        <input
-          id="rsvp-email"
-          name="email"
-          type="email"
-          required
-          maxLength={RSVP_EMAIL_MAX}
-          autoComplete="email"
-          value={email}
-          disabled={submitting}
-          onChange={(event) => setEmail(event.target.value)}
-          aria-describedby={emailHint ? 'rsvp-email-hint' : undefined}
-          className="rounded-lg border border-khaki bg-cream px-3 py-2 font-body text-charcoal disabled:opacity-60"
-        />
-        {emailHint && (
-          <p id="rsvp-email-hint" role="alert" className="font-body text-sm text-rust">
-            {FIELD_HINTS.email}
-          </p>
-        )}
-      </div>
-
-      <button
-        type="submit"
-        disabled={submitting}
-        className="self-start rounded-full bg-rust px-6 py-3 font-body text-sm font-semibold text-cream transition hover:bg-rust-soft disabled:cursor-not-allowed disabled:bg-khaki disabled:hover:bg-khaki"
+    <div>
+      {/*
+        Mounted from first paint and never removed, including when the form
+        below is retired. A live region that appears *with* its message already
+        inside it is routinely not announced at all — there is no change for a
+        screen reader to notice — and this one has to survive the form
+        disappearing under it, since that is exactly when it has news.
+        `tabIndex={-1}` makes it a place focus can be put without putting it in
+        the tab order.
+      */}
+      <div
+        ref={outcomeRef}
+        role="status"
+        aria-live="polite"
+        tabIndex={-1}
+        className={
+          announcement === null
+            ? undefined
+            : `rounded-xl bg-linen px-4 py-3 font-body text-charcoal${terminal ? '' : ' mb-4'}`
+        }
       >
-        {submitting ? 'saving your seat…' : 'Save my seat'}
-      </button>
-    </form>
+        {announcement}
+      </div>
+
+      {!terminal && (
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <label htmlFor="rsvp-name" className="font-body text-sm font-semibold text-charcoal">
+              Your name
+            </label>
+            <input
+              ref={nameRef}
+              id="rsvp-name"
+              name="name"
+              type="text"
+              required
+              maxLength={RSVP_NAME_MAX}
+              autoComplete="name"
+              value={name}
+              disabled={submitting}
+              onChange={(event) => setName(event.target.value)}
+              aria-invalid={nameHint || undefined}
+              aria-describedby={nameHint ? 'rsvp-name-hint' : undefined}
+              className="rounded-lg border border-khaki bg-cream px-3 py-2 font-body text-charcoal disabled:opacity-60"
+            />
+            {nameHint && (
+              <p id="rsvp-name-hint" role="alert" className="font-body text-sm text-rust">
+                {FIELD_HINTS.name}
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label htmlFor="rsvp-email" className="font-body text-sm font-semibold text-charcoal">
+              Email
+            </label>
+            <input
+              ref={emailRef}
+              id="rsvp-email"
+              name="email"
+              type="email"
+              required
+              maxLength={RSVP_EMAIL_MAX}
+              autoComplete="email"
+              value={email}
+              disabled={submitting}
+              onChange={(event) => setEmail(event.target.value)}
+              aria-invalid={emailHint || undefined}
+              aria-describedby={emailHint ? 'rsvp-email-hint' : undefined}
+              className="rounded-lg border border-khaki bg-cream px-3 py-2 font-body text-charcoal disabled:opacity-60"
+            />
+            {emailHint && (
+              <p id="rsvp-email-hint" role="alert" className="font-body text-sm text-rust">
+                {FIELD_HINTS.email}
+              </p>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="self-start rounded-full bg-rust px-6 py-3 font-body text-sm font-semibold text-cream transition hover:bg-rust-soft disabled:cursor-not-allowed disabled:bg-khaki disabled:hover:bg-khaki"
+          >
+            {submitting ? 'saving your seat…' : 'Save my seat'}
+          </button>
+        </form>
+      )}
+    </div>
   );
 }

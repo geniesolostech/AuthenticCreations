@@ -223,6 +223,111 @@ describe('RsvpForm — 400 inline guidance', () => {
   });
 });
 
+describe('RsvpForm — announcements and focus', () => {
+  /** The persistent live region. It is in the DOM from first paint. */
+  function liveRegion(): HTMLElement {
+    return screen.getByRole('status');
+  }
+
+  test('the live region is mounted and empty before anything is submitted', () => {
+    render(<RsvpForm eventSlug="august-circle" />);
+
+    // Mounted up front on purpose: a live region inserted *with* its message
+    // already in it is routinely not announced at all, because there is no
+    // change for the screen reader to notice.
+    expect(liveRegion()).toBeInTheDocument();
+    expect(liveRegion()).toHaveTextContent('');
+    expect(liveRegion()).toHaveAttribute('aria-live', 'polite');
+  });
+
+  test('a terminal answer lands in that same region, and takes focus with it', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue(json({ result: 'CREATED' }, 201));
+    const user = userEvent.setup();
+
+    render(<RsvpForm eventSlug="august-circle" />);
+    await signUp(user);
+
+    await waitFor(() => expect(liveRegion()).toHaveTextContent(/You're in!/));
+    // Both fields were disabled mid-flight, which drops focus to <body>; the
+    // form is then gone entirely. Without this the visitor is left nowhere.
+    expect(liveRegion()).toHaveFocus();
+  });
+
+  test('a retryable hiccup announces and takes focus without retiring the form', async () => {
+    vi.spyOn(global, 'fetch').mockRejectedValue(new Error('network down'));
+    const user = userEvent.setup();
+
+    render(<RsvpForm eventSlug="august-circle" />);
+    await signUp(user);
+
+    await waitFor(() => expect(liveRegion()).toHaveTextContent(/something hiccuped/i));
+    expect(liveRegion()).toHaveFocus();
+    expect(screen.getByRole('button', { name: /save my seat/i })).toBeEnabled();
+  });
+
+  test('a 400 about the email marks that field invalid and puts the cursor in it', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue(json({ error: 'INVALID' }, 400));
+    const user = userEvent.setup();
+
+    render(<RsvpForm eventSlug="august-circle" />);
+    await signUp(user, { email: 'marisol@example' });
+
+    await screen.findByText(/check that email address/i);
+    const email = screen.getByLabelText(/email/i);
+    expect(email).toHaveAttribute('aria-invalid', 'true');
+    // Focus goes to the thing to fix, not to a general notice: its hint is
+    // wired up with aria-describedby, so landing there reads the hint out.
+    expect(email).toHaveFocus();
+    expect(screen.getByLabelText(/name/i)).not.toHaveAttribute('aria-invalid', 'true');
+  });
+
+  test('a 400 about the name marks that field invalid and puts the cursor in it', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue(json({ error: 'INVALID' }, 400));
+    const user = userEvent.setup();
+
+    render(<RsvpForm eventSlug="august-circle" />);
+    await signUp(user, { name: '   ' });
+
+    await screen.findByText(/add your name/i);
+    expect(nameField()).toHaveAttribute('aria-invalid', 'true');
+    expect(nameField()).toHaveFocus();
+  });
+
+  test('a 400 we cannot pin on a field announces in the live region instead', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue(json({ error: 'INVALID' }, 400));
+    const user = userEvent.setup();
+
+    render(<RsvpForm eventSlug="august-circle" />);
+    await signUp(user);
+
+    await waitFor(() => expect(liveRegion()).toHaveTextContent(/check your name and email/i));
+    expect(liveRegion()).toHaveFocus();
+    expect(nameField()).not.toHaveAttribute('aria-invalid', 'true');
+  });
+
+  test('neither field is marked invalid before anything has been submitted', () => {
+    render(<RsvpForm eventSlug="august-circle" />);
+
+    expect(nameField()).not.toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText(/email/i)).not.toHaveAttribute('aria-invalid', 'true');
+  });
+
+  test('typing after a rejection does not yank focus back to the notice', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue(json({ error: 'INVALID' }, 400));
+    const user = userEvent.setup();
+
+    render(<RsvpForm eventSlug="august-circle" />);
+    await signUp(user, { email: 'marisol@example' });
+    await screen.findByText(/check that email address/i);
+
+    await user.type(screen.getByLabelText(/email/i), '.com');
+
+    // The hint disappears as the address becomes valid again; focus must stay
+    // where the visitor is typing rather than following the vanishing hint.
+    expect(screen.getByLabelText(/email/i)).toHaveFocus();
+  });
+});
+
 describe('RsvpForm — retryable faults', () => {
   test('a dropped connection says something hiccuped and keeps the form', async () => {
     vi.spyOn(global, 'fetch').mockRejectedValue(new Error('network down'));
