@@ -57,6 +57,22 @@ export const checkoutBodySchema = z.object({
 
 export type CheckoutBody = z.infer<typeof checkoutBodySchema>;
 
+/**
+ * Body of `POST /api/rsvp`.
+ *
+ * Shape and payload size only. What makes a name or an email *valid* belongs to
+ * `lib/rsvp-service.ts`, which trims first — so a 101-character name that trims
+ * to 100 is a seat, not a rejection, and duplicating the 100/254 limits here
+ * would quietly overrule that. These caps exist so nobody can post a novel.
+ */
+export const rsvpBodySchema = z.object({
+  eventSlug: z.string().min(1).max(200),
+  name: z.string().max(1000),
+  email: z.string().max(1000),
+});
+
+export type RsvpBody = z.infer<typeof rsvpBodySchema>;
+
 /** The `ids` query parameter of `GET /api/inventory`, after splitting. */
 export const inventoryIdsSchema = z.array(z.string().min(1)).min(1).max(MAX_INVENTORY_IDS);
 
