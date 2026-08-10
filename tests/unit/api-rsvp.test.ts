@@ -34,7 +34,8 @@ vi.mock('@/lib/sanity/client', () => ({
   sanityWriteClient: { create: sanity.create },
 }));
 
-import { POST } from '@/app/api/rsvp/route';
+import { POST, _resetRateLimitForTests } from '@/app/api/rsvp/route';
+import { RSVP_RATE_LIMIT } from '@/lib/rate-limit';
 import { EVENT_BY_SLUG_QUERY, FIND_RSVP_QUERY, RSVP_COUNT_QUERY } from '@/lib/sanity/queries';
 
 /**
@@ -62,15 +63,22 @@ const VALID_BODY = {
   email: 'marisol@example.com',
 };
 
-function post(body: unknown, init: { raw?: string } = {}): Request {
+function post(body: unknown, init: { raw?: string; ip?: string } = {}): Request {
   return new Request(`${SITE_URL}/api/rsvp`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      ...(init.ip === undefined ? {} : { 'x-forwarded-for': init.ip }),
+    },
     body: init.raw ?? JSON.stringify(body),
   });
 }
 
 beforeEach(() => {
+  // The limiter's counters are module-level and outlive a single test, so
+  // without this the sixth POST in this file would start answering 429.
+  _resetRateLimitForTests();
+
   getEvent.mockResolvedValue(UPCOMING_EVENT);
   countRsvps.mockResolvedValue(0);
   findExisting.mockResolvedValue(null);
@@ -318,6 +326,73 @@ describe('POST /api/rsvp — 503 when Sanity is unreachable', () => {
 
     // (`error` itself is our own response key, so it is not in this list.)
     expect(body).not.toMatch(/sk-SECRET|Unauthorized|token|sanity|stack|message/i);
+    expect(Object.keys(JSON.parse(body) as object)).toEqual(['error']);
+  });
+});
+
+describe('POST /api/rsvp — rate limiting', () => {
+  const IP = '203.0.113.7';
+
+  it(`allows ${RSVP_RATE_LIMIT} posts from one caller, then answers 429`, async () => {
+    for (let i = 0; i < RSVP_RATE_LIMIT; i++) {
+      // Each one a distinct email so nothing else can be what turns them away.
+      const response = await POST(post({ ...VALID_BODY, email: `guest${i}@example.com` }, { ip: IP }));
+      expect(response.status).toBe(201);
+    }
+
+    const throttled = await POST(post(VALID_BODY, { ip: IP }));
+
+    expect(throttled.status).toBe(429);
+    await expect(throttled.json()).resolves.toEqual({ error: 'TRY_AGAIN_LATER' });
+    expect(throttled.headers.get('cache-control')).toBe('no-store');
+  });
+
+  it('does not touch Sanity for a throttled request', async () => {
+    for (let i = 0; i < RSVP_RATE_LIMIT; i++) {
+      await POST(post({ ...VALID_BODY, email: `guest${i}@example.com` }, { ip: IP }));
+    }
+    vi.clearAllMocks();
+
+    await POST(post(VALID_BODY, { ip: IP }));
+
+    // A refusal that still costs a read (or a document) is not a throttle.
+    expect(sanity.freshFetch).not.toHaveBeenCalled();
+    expect(createDoc).not.toHaveBeenCalled();
+  });
+
+  it('counts each caller separately', async () => {
+    for (let i = 0; i < RSVP_RATE_LIMIT; i++) {
+      await POST(post({ ...VALID_BODY, email: `guest${i}@example.com` }, { ip: IP }));
+    }
+    expect((await POST(post(VALID_BODY, { ip: IP }))).status).toBe(429);
+
+    // One noisy visitor must not close the circle to everyone else.
+    const other = await POST(post(VALID_BODY, { ip: '198.51.100.4' }));
+
+    expect(other.status).toBe(201);
+  });
+
+  it('attributes the caller to the first hop of x-forwarded-for', async () => {
+    // Behind CloudFront every request carries the edge's address as a later
+    // hop; keying on that would put the whole internet in one bucket.
+    for (let i = 0; i < RSVP_RATE_LIMIT; i++) {
+      await POST(
+        post({ ...VALID_BODY, email: `guest${i}@example.com` }, { ip: `${IP}, 70.132.0.${i}` }),
+      );
+    }
+
+    const throttled = await POST(post(VALID_BODY, { ip: `${IP}, 70.132.0.99` }));
+
+    expect(throttled.status).toBe(429);
+  });
+
+  it('leaks nothing but the code in a throttled body', async () => {
+    for (let i = 0; i < RSVP_RATE_LIMIT; i++) {
+      await POST(post({ ...VALID_BODY, email: `guest${i}@example.com` }, { ip: IP }));
+    }
+
+    const body = await (await POST(post(VALID_BODY, { ip: IP }))).text();
+
     expect(Object.keys(JSON.parse(body) as object)).toEqual(['error']);
   });
 });

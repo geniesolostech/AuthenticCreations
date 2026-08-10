@@ -10,8 +10,10 @@
  * token, no internal text ever reaches the browser — those go to the server log.
  */
 import { rsvpBodySchema } from '@/lib/api-schemas';
+import { clientIp, makeRateLimiter, type RateLimiter } from '@/lib/rate-limit';
 import { submitRsvp, type RsvpDeps, type RsvpResult } from '@/lib/rsvp-service';
 import { sanityClient, sanityWriteClient } from '@/lib/sanity/client';
+import { fixtureRsvpDeps, sanityFixturesEnabled } from '@/lib/sanity/fixtures';
 import {
   EVENT_BY_SLUG_QUERY,
   FIND_RSVP_QUERY,
@@ -79,7 +81,48 @@ const sanityDeps: RsvpDeps = {
   now: () => new Date(),
 };
 
+/**
+ * Which set of dependencies a request runs against.
+ *
+ * This route is the one place in the app that cannot get its fixture data from
+ * `lib/sanity/queries.ts`: it deliberately reads through its own non-CDN client
+ * and writes with a token, neither of which exists in fixture mode. So the
+ * whole dependency bundle is swapped instead — the rules in `submitRsvp` are
+ * identical either way, which is the point.
+ *
+ * Read per request rather than captured at module load, so the flag behaves the
+ * same here as everywhere else. False in every deployed build.
+ */
+function deps(): RsvpDeps {
+  return sanityFixturesEnabled() ? fixtureRsvpDeps : sanityDeps;
+}
+
+/**
+ * The one throttle in the app.
+ *
+ * This endpoint is unauthenticated and it *creates documents*, so an
+ * unthrottled burst does not merely spam the RSVP list — it spends the Sanity
+ * project's document quota, which takes the shop down with it. The limiter
+ * lives in this process's memory, so on Lambda the budget is per warm instance
+ * and this is a speed bump rather than a wall; see lib/rate-limit.ts and the
+ * runbook's WAF note.
+ *
+ * Module-level, so the counters survive between requests on one instance.
+ */
+let limiter: RateLimiter = makeRateLimiter();
+
+/** Test seam: the counters outlive any one request, so tests must reset them. */
+export function _resetRateLimitForTests(): void {
+  limiter = makeRateLimiter();
+}
+
 export async function POST(request: Request): Promise<Response> {
+  // Before the body is even read: a refusal must cost less than an acceptance,
+  // or the throttle becomes its own denial-of-service amplifier.
+  if (!limiter.check(clientIp(request))) {
+    return Response.json({ error: 'TRY_AGAIN_LATER' }, { status: 429, headers: NO_STORE });
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -95,7 +138,7 @@ export async function POST(request: Request): Promise<Response> {
 
   let result: RsvpResult;
   try {
-    result = await submitRsvp(parsed.data, sanityDeps);
+    result = await submitRsvp(parsed.data, deps());
   } catch (error) {
     // Sanity unreachable, or the write was refused. The service itself decides
     // nothing here — it either answered or it didn't.

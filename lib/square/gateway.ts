@@ -6,6 +6,7 @@ import { SquareClient, SquareEnvironment } from 'square';
 import type { CatalogItemVariation, ItemVariationLocationOverrides } from 'square';
 
 import { SquareGatewayError } from './errors';
+import { fixtureGateway, squareFixturesEnabled } from './fixtures';
 
 /**
  * The only module in the app that imports the `square` SDK.
@@ -46,8 +47,16 @@ export interface SquareGateway {
  * Builds a gateway from `SQUARE_ACCESS_TOKEN`, `SQUARE_ENVIRONMENT` and
  * `SQUARE_LOCATION_ID`. Env is read once, at construction, so a misconfigured
  * deployment fails loudly at first use rather than mid-checkout.
+ *
+ * With `SQUARE_FAKE=1` it returns the in-repo fixture catalog instead (see
+ * ./fixtures.ts) — a dev/test-only escape hatch for the E2E suite and for
+ * running the shop before anyone has Square credentials. The check comes
+ * *first*, before any env var is required, because the whole point is a run
+ * with no credentials at all.
  */
 export function realGateway(): SquareGateway {
+  if (squareFixturesEnabled()) return fixtureGateway();
+
   const locationId = requireEnv('SQUARE_LOCATION_ID');
   const client = new SquareClient({
     token: requireEnv('SQUARE_ACCESS_TOKEN'),
@@ -100,28 +109,40 @@ export function realGateway(): SquareGateway {
       // outside the wrapper would let a mid-pagination failure escape as a raw
       // SDK error, breaking the containment contract in ./errors.ts.
       return call('inventory.batchGetCounts', async () => {
-        const page = await client.inventory.batchGetCounts({
+        let page = await client.inventory.batchGetCounts({
           catalogObjectIds: ids,
           locationIds: [locationId],
           states: ['IN_STOCK'],
         });
-        // Square can return 200 with partial errors. Dropping those would yield
-        // a short count map, and a missing id reads downstream as "untracked",
-        // i.e. always available — so a partial failure would fail OPEN. Throw.
-        throwOnErrors('inventory.batchGetCounts', page.response.errors);
 
         const out = new Map<string, number>();
-        // Untracked variations simply have no IN_STOCK row and so never appear.
-        for await (const count of page) {
-          if (count.state !== 'IN_STOCK') continue;
-          if (count.locationId !== locationId) continue;
-          const id = count.catalogObjectId;
-          if (!id) continue;
-          const quantity = Number(count.quantity);
-          if (!Number.isFinite(quantity)) continue;
-          // Quantity is a decimal string; floor so a partial unit never reads as
-          // sellable stock.
-          out.set(id, Math.floor(quantity));
+        // Pagination is driven by hand rather than with `for await (…of page)`:
+        // the async iterator yields *items*, which hides where one page ends and
+        // the next begins, and each page carries its own `response.errors`. Only
+        // the first page's errors would ever be seen, so a partial failure on
+        // page two would fail OPEN (see the throw below). `getNextPage()`
+        // mutates and returns the same Page, so `page` is reassigned from it.
+        for (;;) {
+          // Square can return 200 with partial errors. Dropping those would
+          // yield a short count map, and a missing id reads downstream as
+          // "untracked", i.e. always available. Fail closed instead.
+          throwOnErrors('inventory.batchGetCounts', page.response.errors);
+
+          // Untracked variations simply have no IN_STOCK row and never appear.
+          for (const count of page.data) {
+            if (count.state !== 'IN_STOCK') continue;
+            if (count.locationId !== locationId) continue;
+            const id = count.catalogObjectId;
+            if (!id) continue;
+            const quantity = Number(count.quantity);
+            if (!Number.isFinite(quantity)) continue;
+            // Quantity is a decimal string; floor so a partial unit never reads
+            // as sellable stock.
+            out.set(id, Math.floor(quantity));
+          }
+
+          if (!page.hasNextPage()) break;
+          page = await page.getNextPage();
         }
         return out;
       });

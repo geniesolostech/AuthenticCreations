@@ -4,6 +4,7 @@ import SiteHeader from "@/components/site-header";
 import SiteFooter from "@/components/site-footer";
 import CartTrigger from "@/components/cart-trigger";
 import MiniCart from "@/components/mini-cart";
+import Rum from "@/components/rum";
 import { CartProvider } from "@/lib/cart-context";
 import "./globals.css";
 
@@ -37,6 +38,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               that Add-to-Cart and the header trigger fire. */}
           <MiniCart />
         </CartProvider>
+        {/* Renders nothing and does nothing until the NEXT_PUBLIC_RUM_* vars
+            exist, which is why it is safe to mount here unconditionally. */}
+        <Rum />
       </body>
     </html>
   );

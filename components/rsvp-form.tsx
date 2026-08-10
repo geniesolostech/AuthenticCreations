@@ -15,7 +15,15 @@ import {
  * ones replace the form — there is nothing left to type. `invalid` and
  * `hiccup` leave it in place so the visitor can fix or retry.
  */
-type Outcome = 'created' | 'duplicate' | 'full' | 'past' | 'notFound' | 'invalid' | 'hiccup';
+type Outcome =
+  | 'created'
+  | 'duplicate'
+  | 'full'
+  | 'past'
+  | 'notFound'
+  | 'invalid'
+  | 'throttled'
+  | 'hiccup';
 
 const TERMINAL: ReadonlySet<Outcome> = new Set<Outcome>([
   'created',
@@ -32,6 +40,9 @@ const MESSAGES: Record<Outcome, string> = {
   past: `${CIRCLE_MET_MESSAGE} — watch for the next one`,
   notFound: "we couldn't find that circle — it may have moved",
   invalid: 'check your name and email, then try again?',
+  // Distinct from `hiccup` on purpose: "try again" is exactly the wrong advice
+  // for someone the server has just asked to slow down.
+  throttled: "that's a few tries in a row — give it a couple of minutes and we'll try again",
   hiccup: 'something hiccuped — try again?',
 };
 
@@ -48,6 +59,7 @@ const BY_STATUS: Record<number, Outcome> = {
   404: 'notFound',
   409: 'duplicate',
   410: 'past',
+  429: 'throttled',
 };
 
 export interface RsvpFormProps {

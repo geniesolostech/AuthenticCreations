@@ -76,9 +76,13 @@ describe('/ — hero', () => {
     render(await Home());
 
     expect(screen.getByRole('heading', { level: 1, name: 'Authentic Creations' })).toBeInTheDocument();
-    expect(
-      screen.getByRole('img', { name: 'Authentic Creations — Find you in whatever you do' }),
-    ).toBeInTheDocument();
+    const logo = screen.getByRole('img', {
+      name: 'Authentic Creations — Find you in whatever you do',
+    });
+    expect(logo).toBeInTheDocument();
+    // The transparent PNG, not the source JPEG: the JPEG's baked-in white
+    // background sits on the linen hero as a visible rectangle.
+    expect(logo).toHaveAttribute('src', '/logo.png');
   });
 });
 

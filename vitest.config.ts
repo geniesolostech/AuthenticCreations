@@ -8,6 +8,12 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
+    // `*.test.*` only, deliberately narrower than Vitest's default (which also
+    // claims `*.spec.*`). The Playwright suite in tests/e2e is written in
+    // `*.spec.ts` and needs a browser and a running dev server; picked up here
+    // it would fail at `import '@playwright/test'` and take `npm test` down
+    // with it. One suffix per runner keeps the two from colliding.
+    include: ["tests/**/*.test.{ts,tsx}"],
   },
   resolve: {
     alias: {

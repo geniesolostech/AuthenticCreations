@@ -1,6 +1,7 @@
 import type { Section } from '@/lib/types';
 
 import { sanityClient } from './client';
+import { sanityFixtures, sanityFixturesEnabled } from './fixtures';
 
 // ---------------------------------------------------------------------------
 // Result types
@@ -157,52 +158,73 @@ export const POLICIES_PAGE_QUERY = `*[_type == "policiesPage"][0] {
 
 // ---------------------------------------------------------------------------
 // Typed query helpers
+//
+// Each one is the single door between the app and Sanity, which is what makes
+// it the right place for the `SANITY_FAKE` seam: every caller — pages, the
+// sitemap, `generateStaticParams` — goes through here, so one check per helper
+// covers the whole app and no page needs to know fixtures exist.
+//
+// `sanityFixturesEnabled()` is false unless a developer set `SANITY_FAKE=1` in
+// their own shell (Amplify never does — see docs/launch-runbook.md), so in any
+// deployed build these are exactly the one-line fetches they were before.
 // ---------------------------------------------------------------------------
 
 export function getProducts(section: Section): Promise<Product[]> {
+  if (sanityFixturesEnabled()) return Promise.resolve(sanityFixtures.products(section));
   return sanityClient.fetch<Product[]>(PRODUCTS_QUERY, { section });
 }
 
 export function getProduct(slug: string): Promise<Product | null> {
+  if (sanityFixturesEnabled()) return Promise.resolve(sanityFixtures.product(slug));
   return sanityClient.fetch<Product | null>(PRODUCT_QUERY, { slug });
 }
 
 export function getFeaturedProducts(): Promise<Product[]> {
+  if (sanityFixturesEnabled()) return Promise.resolve(sanityFixtures.featuredProducts());
   return sanityClient.fetch<Product[]>(FEATURED_PRODUCTS_QUERY);
 }
 
 export function getPosts(): Promise<PostSummary[]> {
+  if (sanityFixturesEnabled()) return Promise.resolve(sanityFixtures.posts());
   return sanityClient.fetch<PostSummary[]>(POSTS_QUERY);
 }
 
 export function getPost(slug: string): Promise<Post | null> {
+  if (sanityFixturesEnabled()) return Promise.resolve(sanityFixtures.post(slug));
   return sanityClient.fetch<Post | null>(POST_QUERY, { slug });
 }
 
 export function getUpcomingEvents(now: Date): Promise<EventDoc[]> {
+  if (sanityFixturesEnabled()) return Promise.resolve(sanityFixtures.upcomingEvents(now));
   return sanityClient.fetch<EventDoc[]>(UPCOMING_EVENTS_QUERY, { now: now.toISOString() });
 }
 
 export function getPastEvents(now: Date): Promise<EventDoc[]> {
+  if (sanityFixturesEnabled()) return Promise.resolve(sanityFixtures.pastEvents(now));
   return sanityClient.fetch<EventDoc[]>(PAST_EVENTS_QUERY, { now: now.toISOString() });
 }
 
 export function getEventBySlug(slug: string): Promise<EventDoc | null> {
+  if (sanityFixturesEnabled()) return Promise.resolve(sanityFixtures.eventBySlug(slug));
   return sanityClient.fetch<EventDoc | null>(EVENT_BY_SLUG_QUERY, { slug });
 }
 
 export function getRsvpCount(eventId: string): Promise<number> {
+  if (sanityFixturesEnabled()) return Promise.resolve(sanityFixtures.rsvpCount(eventId));
   return sanityClient.fetch<number>(RSVP_COUNT_QUERY, { eventId });
 }
 
 export function findRsvp(eventId: string, email: string): Promise<Rsvp | null> {
+  if (sanityFixturesEnabled()) return Promise.resolve(sanityFixtures.findRsvp(eventId, email));
   return sanityClient.fetch<Rsvp | null>(FIND_RSVP_QUERY, { eventId, email });
 }
 
 export function getAboutPage(): Promise<AboutPage | null> {
+  if (sanityFixturesEnabled()) return Promise.resolve(sanityFixtures.aboutPage());
   return sanityClient.fetch<AboutPage | null>(ABOUT_PAGE_QUERY);
 }
 
 export function getPoliciesPage(): Promise<PoliciesPage | null> {
+  if (sanityFixturesEnabled()) return Promise.resolve(sanityFixtures.policiesPage());
   return sanityClient.fetch<PoliciesPage | null>(POLICIES_PAGE_QUERY);
 }

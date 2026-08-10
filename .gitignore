@@ -11,6 +11,12 @@ coverage/
 .env*
 !.env.example
 
+# playwright — traces, screenshots and reports from a local E2E run
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
 # misc
 .DS_Store
 *.pem

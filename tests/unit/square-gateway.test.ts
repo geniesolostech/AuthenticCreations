@@ -28,23 +28,44 @@ const { realGateway } = await import('@/lib/square/gateway');
 
 const LOCATION = 'LOC-1';
 
-/** Structural stand-in for the SDK's `core.Page`: iterable, plus `.response`. */
-function fakePage(options: {
+interface FakePageSpec {
   counts?: Record<string, unknown>[];
   errors?: { detail?: string }[];
-  throwOnIteration?: boolean;
-}) {
-  return {
-    response: { errors: options.errors },
-    async *[Symbol.asyncIterator]() {
-      for (const count of options.counts ?? []) {
-        yield count;
-      }
-      if (options.throwOnIteration) {
-        throw new Error('cursor expired while paginating');
-      }
+  /** Makes the fetch of the *following* page reject, as an expired cursor would. */
+  throwOnNext?: boolean;
+}
+
+/**
+ * Structural stand-in for the SDK's `core.Page` (node_modules/square/core/pagination/Page.js):
+ * `data` and `response` describe the page currently loaded, `getNextPage()`
+ * mutates in place and returns itself, and `hasNextPage()` reports whether
+ * there is more. Modelling all of that — rather than just being async-iterable —
+ * is what lets these tests see per-page error payloads at all.
+ */
+function fakePages(specs: FakePageSpec[]) {
+  let index = 0;
+  const page = {
+    get data(): Record<string, unknown>[] {
+      return specs[index].counts ?? [];
+    },
+    get response(): { errors?: { detail?: string }[] } {
+      return { errors: specs[index].errors };
+    },
+    hasNextPage(): boolean {
+      return index < specs.length - 1;
+    },
+    async getNextPage() {
+      if (specs[index].throwOnNext) throw new Error('cursor expired while paginating');
+      index += 1;
+      return page;
     },
   };
+  return page;
+}
+
+/** The single-page case, which is most of these tests. */
+function fakePage(options: FakePageSpec = {}) {
+  return fakePages([options]);
 }
 
 function installClient(overrides: Record<string, unknown>): void {
@@ -188,14 +209,55 @@ describe('getInventoryCounts', () => {
     await expect(realGateway().getInventoryCounts(['a', 'b'])).rejects.toThrow(SquareGatewayError);
   });
 
+  it('reads every page, not just the first', async () => {
+    installClient({
+      inventory: {
+        batchGetCounts: vi.fn().mockResolvedValue(
+          fakePages([
+            { counts: [{ catalogObjectId: 'a', state: 'IN_STOCK', locationId: LOCATION, quantity: '7' }] },
+            { counts: [{ catalogObjectId: 'b', state: 'IN_STOCK', locationId: LOCATION, quantity: '3' }] },
+          ]),
+        ),
+      },
+    });
+
+    const counts = await realGateway().getInventoryCounts(['a', 'b']);
+
+    expect(Object.fromEntries(counts)).toEqual({ a: 7, b: 3 });
+  });
+
+  it('throws when a *later* page reports errors, not just the first', async () => {
+    // The failure this guards: checking only page one's `response.errors` lets a
+    // partial failure on page two through as a short map, and a missing id reads
+    // downstream as "untracked" — i.e. always available. That fails OPEN, which
+    // is how you sell something you do not have.
+    installClient({
+      inventory: {
+        batchGetCounts: vi.fn().mockResolvedValue(
+          fakePages([
+            { counts: [{ catalogObjectId: 'a', state: 'IN_STOCK', locationId: LOCATION, quantity: '7' }] },
+            { counts: [], errors: [{ detail: 'location unavailable' }] },
+          ]),
+        ),
+      },
+    });
+
+    await expect(realGateway().getInventoryCounts(['a', 'b'])).rejects.toThrow(SquareGatewayError);
+  });
+
   it('wraps a mid-pagination failure in a SquareGatewayError', async () => {
     installClient({
       inventory: {
         batchGetCounts: vi.fn().mockResolvedValue(
-          fakePage({
-            counts: [{ catalogObjectId: 'a', state: 'IN_STOCK', locationId: LOCATION, quantity: '7' }],
-            throwOnIteration: true,
-          }),
+          fakePages([
+            {
+              counts: [
+                { catalogObjectId: 'a', state: 'IN_STOCK', locationId: LOCATION, quantity: '7' },
+              ],
+              throwOnNext: true,
+            },
+            { counts: [] },
+          ]),
         ),
       },
     });

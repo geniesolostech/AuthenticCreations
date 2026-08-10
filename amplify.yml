@@ -1,0 +1,65 @@
+# AWS Amplify Hosting build settings — Authentic Creations.
+#
+# Amplify reads this file from the repo root on every build, so the build is
+# versioned with the code rather than living in console settings nobody can
+# diff. Changing the build means changing this file.
+#
+# Framework: Next.js (App Router) with server-rendered routes and API routes.
+# Amplify detects that from `next build`'s output and deploys the SSR compute
+# bundle; nothing here needs to say so.
+#
+# ---------------------------------------------------------------------------
+# Environment variables
+# ---------------------------------------------------------------------------
+# None are set here on purpose — secrets in a committed file are secrets no
+# longer. All of them live in the Amplify console under
+#   App settings → Environment variables
+# and are injected into this build automatically. Full list and where each
+# value comes from: docs/launch-runbook.md.
+#
+#   SQUARE_ACCESS_TOKEN            secret — CJ's production token
+#   SQUARE_ENVIRONMENT             production
+#   SQUARE_LOCATION_ID             CJ's Square location
+#   SANITY_API_WRITE_TOKEN         secret — RSVP writes
+#   NEXT_PUBLIC_SITE_URL           https://authenticcreationsco.com
+#   NEXT_PUBLIC_SANITY_PROJECT_ID  from `npx sanity init`
+#   NEXT_PUBLIC_SANITY_DATASET     production
+#   NEXT_PUBLIC_RUM_APP_MONITOR_ID from the CloudWatch RUM app monitor
+#   NEXT_PUBLIC_RUM_IDENTITY_POOL_ID  from the Cognito guest identity pool
+#   NEXT_PUBLIC_RUM_REGION         the app monitor's region, e.g. us-east-1
+#
+# IMPORTANT — every `NEXT_PUBLIC_*` variable must be present at **BUILD** time,
+# not merely at runtime. Next inlines them into the JavaScript it emits, so a
+# variable added to the console after a build has no effect until the next
+# build: set it, then **redeploy**. A missing NEXT_PUBLIC_SITE_URL fails this
+# build outright (next.config.ts) rather than shipping a site whose checkout
+# quietly refuses every order.
+#
+# SANITY_FAKE and SQUARE_FAKE are development-only fixture switches (see
+# lib/sanity/fixtures.ts and lib/square/fixtures.ts). They must never be set
+# here or in the Amplify console — a deployed build with either one on would
+# serve invented products at invented prices.
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        # `ci`, not `install`: it installs exactly what package-lock.json pins
+        # and fails if the two have drifted, so a deploy can never quietly
+        # resolve a different dependency tree than the one that was tested.
+        - npm ci
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    # Amplify's Next.js SSR deployment reads the whole .next directory.
+    baseDirectory: .next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      # node_modules: skips a full re-resolve when package-lock.json has not
+      # changed. .next/cache: Next's compiler and image caches, which is what
+      # keeps an incremental deploy from rebuilding every page from scratch.
+      - node_modules/**/*
+      - .next/cache/**/*

@@ -2,10 +2,15 @@ import Link from 'next/link';
 
 /**
  * The front door: the brand mark, a real (crawlable/screen-reader-readable)
- * headline + tagline — the source JPEG in `public/logo.jpg` already bakes the
- * wordmark and tagline into its pixels, so this restates them as actual text
- * on top of it rather than leaving them locked inside an image — and the two
- * shop CTAs, on the brand's `linen` token.
+ * headline + tagline — `public/logo.png` already bakes the wordmark and
+ * tagline into its pixels, so this restates them as actual text on top of it
+ * rather than leaving them locked inside an image — and the two shop CTAs, on
+ * the brand's `linen` token.
+ *
+ * PNG, not the original JPEG: the source art carries a white background, which
+ * sat on the linen as a visible rectangle. `public/logo.png` is the same art
+ * with that background made transparent (background found by connectivity, so
+ * the white script "a" inside the charcoal disc survives).
  */
 export default function Hero() {
   return (
@@ -16,7 +21,7 @@ export default function Hero() {
             for why), so the hero logo follows the same convention. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/logo.jpg"
+          src="/logo.png"
           alt="Authentic Creations — Find you in whatever you do"
           className="w-full max-w-xs sm:max-w-sm"
         />
