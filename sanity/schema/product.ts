@@ -47,8 +47,22 @@ export default defineType({
     defineField({
       name: 'squareVariationId',
       title: 'Square Variation ID',
-      description: 'The ready-made item’s Square catalog variation id. Filled in during launch.',
+      description:
+        'The ready-made item’s Square catalog variation id. Filled in during launch. Leave this empty on a product sold as variants — each variant carries its own id.',
       type: 'string',
+      // Enforced, not just documented. The grid tile prices a product from this
+      // field and falls back to the first variant only when it is empty, while
+      // the detail page always prices from the variants — so filling in both
+      // lets the tile and the buy button quote different prices for the same
+      // hat. The runbook and the catalog checklist both say so in prose; this
+      // is the copy that cannot be skim-read past.
+      validation: (Rule) =>
+        Rule.custom((value, context) => {
+          const variants = context.document?.variants;
+          if (!Array.isArray(variants) || variants.length === 0) return true;
+          if (typeof value !== 'string' || value.trim() === '') return true;
+          return 'This product uses variants — leave this field empty; each variant carries its own Square ID.';
+        }),
     }),
     defineField({
       name: 'customSquareVariationId',
@@ -76,7 +90,18 @@ export default defineType({
               name: 'squareVariationId',
               title: 'Square Variation ID',
               type: 'string',
-              validation: (Rule) => Rule.required(),
+              // A warning, not an error, and the difference is whether CJ can
+              // press Publish. Studio blocks publishing while any error stands,
+              // so at error level a product whose variants exist but whose
+              // Square ids have not been pasted in yet — exactly what the seed
+              // creates, and exactly the state the launch runbook walks through
+              // — could not be published at all. The site already handles a
+              // variant with no id (no price, disabled buy button), so the
+              // honest level for "not filled in yet" is a nudge.
+              validation: (Rule) =>
+                Rule.required().warning(
+                  'Paste this variant’s Square variation ID before launch — until you do, this variant shows “Price at checkout” and cannot be bought.',
+                ),
             }),
           ],
           preview: {

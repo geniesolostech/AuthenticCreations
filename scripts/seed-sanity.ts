@@ -52,7 +52,14 @@ interface ProductSeed {
   featured: boolean;
   /** Filenames under images/full/, in the order they should appear. */
   photos?: string[];
-  variants?: { label: string; squareVariationId: string }[];
+  /**
+   * `squareVariationId` is deliberately absent, not empty: the seed runs before
+   * anyone has built the Square catalog, so there is no id to write. Writing
+   * `''` would put a blank string in a field the schema asks to be filled in,
+   * which reads in Studio as "someone typed nothing here" rather than "not
+   * done yet". CJ pastes the real ids in during launch step 2.4.
+   */
+  variants?: { label: string }[];
 }
 
 // Descriptions are friendly one-line drafts — CJ can refine them in Studio.
@@ -141,11 +148,7 @@ const PRODUCTS: ProductSeed[] = [
     description: 'Tiny crocheted flowers to clip, pin, or tuck in wherever you like.',
     displayOrder: 2,
     featured: false,
-    variants: [
-      { label: 'Rose', squareVariationId: '' },
-      { label: 'Tulip', squareVariationId: '' },
-      { label: 'Lavender', squareVariationId: '' },
-    ],
+    variants: [{ label: 'Rose' }, { label: 'Tulip' }, { label: 'Lavender' }],
   },
   {
     id: 'product-crochet-slouch-bag',
