@@ -10,9 +10,12 @@
 export interface PlaceholderImageProps {
   title: string;
   className?: string;
+  /** Drops the caption (not the accessible label) for thumbnail-sized uses,
+   * like a cart line, where the title would render as an illegible smudge. */
+  hideTitle?: boolean;
 }
 
-export default function PlaceholderImage({ title, className }: PlaceholderImageProps) {
+export default function PlaceholderImage({ title, className, hideTitle = false }: PlaceholderImageProps) {
   return (
     <svg
       viewBox="0 0 400 400"
@@ -44,11 +47,13 @@ export default function PlaceholderImage({ title, className }: PlaceholderImageP
         />
         <circle cx="200" cy="165" r="88" className="fill-none stroke-khaki" strokeWidth="3" />
       </g>
-      <foreignObject x="20" y="278" width="360" height="100" aria-hidden="true">
-        <div className="flex h-full w-full items-center justify-center px-2 text-center">
-          <span className="line-clamp-2 font-heading text-lg text-charcoal">{title}</span>
-        </div>
-      </foreignObject>
+      {!hideTitle && (
+        <foreignObject x="20" y="278" width="360" height="100" aria-hidden="true">
+          <div className="flex h-full w-full items-center justify-center px-2 text-center">
+            <span className="line-clamp-2 font-heading text-lg text-charcoal">{title}</span>
+          </div>
+        </foreignObject>
+      )}
     </svg>
   );
 }

@@ -21,4 +21,12 @@ export const CUSTOM_COMMENTS_MAX = 500;
  * unbounded work (a Square order caps out at 1000 line items regardless).
  */
 export const MAX_CART_LINES = 50;
+/**
+ * Per-line purchase bounds. One source of truth for the cart engine's clamp
+ * (`lib/cart.ts`), the request schema (`lib/api-schemas.ts`), and the quantity
+ * stepper in the cart UI — a stepper that offered a quantity the API rejects,
+ * or clamped one silently, would be a lie either way.
+ */
+export const MIN_LINE_QUANTITY = 1;
+export const MAX_LINE_QUANTITY = 10;
 export const SECTIONS = ['hats', 'accessories'] as const;

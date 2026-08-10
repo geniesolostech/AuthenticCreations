@@ -11,13 +11,16 @@
  */
 import { z } from 'zod';
 
-import { CUSTOM_COLORS, CUSTOM_COMMENTS_MAX, MAX_CART_LINES } from '@/lib/constants';
+import {
+  CUSTOM_COLORS,
+  CUSTOM_COMMENTS_MAX,
+  MAX_CART_LINES,
+  MAX_LINE_QUANTITY,
+  MIN_LINE_QUANTITY,
+} from '@/lib/constants';
 
 /** Upper bound on ids per inventory request — one storefront page's worth. */
 export const MAX_INVENTORY_IDS = 50;
-
-/** Per-line purchase cap, matching the quantity stepper in the cart UI. */
-export const MAX_LINE_QUANTITY = 10;
 
 /**
  * A single cart line as it arrives over the wire. Structurally a `CartLine`
@@ -33,7 +36,7 @@ export const cartLineSchema = z.object({
   variationId: z.string().min(1),
   name: z.string().min(1),
   unitAmount: z.number().int().nonnegative(),
-  quantity: z.number().int().min(1).max(MAX_LINE_QUANTITY),
+  quantity: z.number().int().min(MIN_LINE_QUANTITY).max(MAX_LINE_QUANTITY),
   imageUrl: z.string().optional(),
   custom: z
     .object({

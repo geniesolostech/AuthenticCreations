@@ -1,10 +1,8 @@
+import { MAX_LINE_QUANTITY, MIN_LINE_QUANTITY } from '@/lib/constants';
 import type { CartLine } from '@/lib/types';
 
-const MIN_QUANTITY = 1;
-const MAX_QUANTITY = 10;
-
 function clampQuantity(qty: number): number {
-  return Math.min(MAX_QUANTITY, Math.max(MIN_QUANTITY, qty));
+  return Math.min(MAX_LINE_QUANTITY, Math.max(MIN_LINE_QUANTITY, qty));
 }
 
 /**
