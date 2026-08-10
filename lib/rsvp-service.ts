@@ -55,7 +55,9 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * turned down without keeping a second, drifting copy of them. Both take raw
  * input and trim it themselves — leading spaces are a typo, not a rejection.
  *
- * This module imports nothing, so a Client Component can pull these in freely.
+ * The only thing this module imports is `lib/events`, which is itself
+ * dependency-free, so a Client Component can pull these in freely (the bundler
+ * tree-shakes `submitRsvp` and its dependency types out of the browser build).
  */
 export function isValidRsvpName(name: string): boolean {
   const trimmed = name.trim();
@@ -75,7 +77,10 @@ export async function submitRsvp(input: RsvpInput, deps: RsvpDeps): Promise<Rsvp
   if (!isValidRsvpName(name) || !isValidRsvpEmail(email)) return 'INVALID';
 
   const event = await deps.getEvent(input.eventSlug);
-  if (event === null) return 'NOT_FOUND';
+  // Truthiness rather than `=== null`: GROQ's `[0]` on no match answers null,
+  // but nothing about a missing document deserves a crash if it ever answers
+  // undefined instead.
+  if (!event) return 'NOT_FOUND';
 
   if (hasStarted(event.startsAt, deps.now())) return 'PAST';
 
