@@ -34,8 +34,8 @@ vi.mock('@/lib/sanity/client', () => ({
   sanityWriteClient: { create: sanity.create },
 }));
 
-import { POST, _resetRateLimitForTests } from '@/app/api/rsvp/route';
-import { RSVP_RATE_LIMIT } from '@/lib/rate-limit';
+import { POST } from '@/app/api/rsvp/route';
+import { RSVP_RATE_LIMIT, _resetRsvpRateLimiterForTests } from '@/lib/rate-limit';
 import { EVENT_BY_SLUG_QUERY, FIND_RSVP_QUERY, RSVP_COUNT_QUERY } from '@/lib/sanity/queries';
 
 /**
@@ -77,7 +77,7 @@ function post(body: unknown, init: { raw?: string; ip?: string } = {}): Request 
 beforeEach(() => {
   // The limiter's counters are module-level and outlive a single test, so
   // without this the sixth POST in this file would start answering 429.
-  _resetRateLimitForTests();
+  _resetRsvpRateLimiterForTests();
 
   getEvent.mockResolvedValue(UPCOMING_EVENT);
   countRsvps.mockResolvedValue(0);

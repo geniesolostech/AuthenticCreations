@@ -115,6 +115,25 @@ function trim(windows: Map<string, Window>, maxKeys: number): void {
 }
 
 /**
+ * The app's one limiter, guarding `POST /api/rsvp`.
+ *
+ * It lives here rather than in the route module for two reasons: a Next route
+ * module may export only its handlers and route config (so the reset seam below
+ * could not sit beside `POST`), and the counters need to outlive a request,
+ * which means module scope either way.
+ */
+let rsvpLimiter = makeRateLimiter();
+
+export function rsvpRateLimiter(): RateLimiter {
+  return rsvpLimiter;
+}
+
+/** Test seam: the counters outlive any one request, so tests must reset them. */
+export function _resetRsvpRateLimiterForTests(): void {
+  rsvpLimiter = makeRateLimiter();
+}
+
+/**
  * The caller a request is attributed to.
  *
  * Behind Amplify/CloudFront the client address arrives in `x-forwarded-for` as

@@ -4,14 +4,15 @@
  *
  * The handler is invoked directly with a `Request`; there is no HTTP server and
  * no Square SDK in play — the module-level gateway is swapped for a fake via the
- * route's `_setGatewayForTests` seam. Node environment, because jsdom does not
+ * `_setGatewayForTests` seam in lib/square/runtime. Node environment, because jsdom does not
  * provide the `Request`/`Response` fetch primitives these handlers are built on.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SquareGatewayError } from '@/lib/square/errors';
 import { FakeGateway } from '@/tests/mocks/fake-square-gateway';
-import { GET, _resetGatewayForTests, _setGatewayForTests } from '@/app/api/inventory/route';
+import { GET } from '@/app/api/inventory/route';
+import { _resetGatewayForTests, _setGatewayForTests } from '@/lib/square/runtime';
 
 function get(query: string): Request {
   return new Request(`https://authentic-creations.test/api/inventory${query}`);

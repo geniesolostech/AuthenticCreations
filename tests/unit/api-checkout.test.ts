@@ -4,7 +4,7 @@
  * front of every money operation.
  *
  * The handler is invoked directly with a `Request`; the module-level gateway is
- * swapped for a fake via the route's `_setGatewayForTests` seam, so no Square
+ * swapped for a fake via lib/square/runtime's `_setGatewayForTests` seam, so no Square
  * SDK, credentials or network are involved. Node environment, because jsdom does
  * not provide the `Request`/`Response` fetch primitives these handlers use.
  */
@@ -12,7 +12,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SquareGatewayError } from '@/lib/square/errors';
 import { FakeGateway } from '@/tests/mocks/fake-square-gateway';
-import { POST, _resetGatewayForTests, _setGatewayForTests } from '@/app/api/checkout/route';
+import { POST } from '@/app/api/checkout/route';
+import { _resetGatewayForTests, _setGatewayForTests } from '@/lib/square/runtime';
 
 const SITE_URL = 'https://authentic-creations.test';
 

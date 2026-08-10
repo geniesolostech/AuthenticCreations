@@ -10,7 +10,7 @@
  * token, no internal text ever reaches the browser — those go to the server log.
  */
 import { rsvpBodySchema } from '@/lib/api-schemas';
-import { clientIp, makeRateLimiter, type RateLimiter } from '@/lib/rate-limit';
+import { clientIp, rsvpRateLimiter } from '@/lib/rate-limit';
 import { submitRsvp, type RsvpDeps, type RsvpResult } from '@/lib/rsvp-service';
 import { sanityClient, sanityWriteClient } from '@/lib/sanity/client';
 import { fixtureRsvpDeps, sanityFixturesEnabled } from '@/lib/sanity/fixtures';
@@ -97,29 +97,17 @@ function deps(): RsvpDeps {
   return sanityFixturesEnabled() ? fixtureRsvpDeps : sanityDeps;
 }
 
-/**
- * The one throttle in the app.
- *
- * This endpoint is unauthenticated and it *creates documents*, so an
- * unthrottled burst does not merely spam the RSVP list — it spends the Sanity
- * project's document quota, which takes the shop down with it. The limiter
- * lives in this process's memory, so on Lambda the budget is per warm instance
- * and this is a speed bump rather than a wall; see lib/rate-limit.ts and the
- * runbook's WAF note.
- *
- * Module-level, so the counters survive between requests on one instance.
- */
-let limiter: RateLimiter = makeRateLimiter();
-
-/** Test seam: the counters outlive any one request, so tests must reset them. */
-export function _resetRateLimitForTests(): void {
-  limiter = makeRateLimiter();
-}
-
 export async function POST(request: Request): Promise<Response> {
-  // Before the body is even read: a refusal must cost less than an acceptance,
-  // or the throttle becomes its own denial-of-service amplifier.
-  if (!limiter.check(clientIp(request))) {
+  // The one throttle in the app. This endpoint is unauthenticated and it
+  // *creates documents*, so an unthrottled burst does not merely spam the RSVP
+  // list — it spends the Sanity project's document quota, which takes the shop
+  // down with it. The counters live in this process's memory, so on Lambda the
+  // budget is per warm instance: a speed bump rather than a wall. See
+  // lib/rate-limit.ts and the runbook's WAF note.
+  //
+  // Checked before the body is even read: a refusal must cost less than an
+  // acceptance, or the throttle becomes its own denial-of-service amplifier.
+  if (!rsvpRateLimiter().check(clientIp(request))) {
     return Response.json({ error: 'TRY_AGAIN_LATER' }, { status: 429, headers: NO_STORE });
   }
 

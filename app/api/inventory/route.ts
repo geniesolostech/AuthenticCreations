@@ -8,8 +8,10 @@
  * which is what lets the UI tell "sold out" apart from "always available".
  */
 import { parseInventoryIds } from '@/lib/api-schemas';
-import { realGateway, type SquareGateway } from '@/lib/square/gateway';
-import { makeInventoryService, type InventoryService } from '@/lib/square/service';
+// The inventory-service singleton and its test seam live in
+// lib/square/runtime.ts: a Next route module may export only its handlers and
+// route config, so anything else has to have a home elsewhere.
+import { inventoryService } from '@/lib/square/runtime';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,31 +23,6 @@ export const dynamic = 'force-dynamic';
  */
 const NO_STORE = { 'cache-control': 'no-store' } as const;
 
-/**
- * Module-level singleton, so the service's per-id TTL cache is shared across
- * requests instead of being thrown away after each one.
- *
- * Built lazily rather than at import time: `realGateway()` reads and validates
- * Square credentials eagerly, and this module is imported during `next build`
- * and by tests, neither of which has (or should need) production secrets.
- */
-let service: InventoryService | null = null;
-
-function inventory(): InventoryService {
-  service ??= makeInventoryService(realGateway());
-  return service;
-}
-
-/** Test seam: swap in a fake gateway and start from a cold cache. */
-export function _setGatewayForTests(gw: SquareGateway): void {
-  service = makeInventoryService(gw);
-}
-
-/** Test seam: drop the fake so the next call rebuilds the real gateway. */
-export function _resetGatewayForTests(): void {
-  service = null;
-}
-
 export async function GET(request: Request): Promise<Response> {
   const ids = parseInventoryIds(new URL(request.url).searchParams.get('ids'));
   if (ids === null) {
@@ -53,7 +30,7 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   try {
-    const counts = await inventory().counts(ids);
+    const counts = await inventoryService().counts(ids);
     return Response.json({ counts }, { headers: NO_STORE });
   } catch (error) {
     // Unlike checkout, `counts()` lets gateway failures propagate. Log the

@@ -10,32 +10,13 @@
  * no internal text ever reaches the client — those go to the server log only.
  */
 import { checkoutBodySchema } from '@/lib/api-schemas';
-import { realGateway, type SquareGateway } from '@/lib/square/gateway';
+// The gateway singleton and its test seam live in lib/square/runtime.ts: a Next
+// route module may export only its handlers and route config, so anything else
+// has to have a home elsewhere.
+import { squareGateway } from '@/lib/square/runtime';
 import { createCheckout, type CheckoutResult } from '@/lib/square/service';
 
 export const dynamic = 'force-dynamic';
-
-/**
- * Module-level singleton, built lazily: `realGateway()` reads and validates
- * Square credentials eagerly, and this module is imported during `next build`
- * and by tests, neither of which has (or should need) production secrets.
- */
-let gateway: SquareGateway | null = null;
-
-function squareGateway(): SquareGateway {
-  gateway ??= realGateway();
-  return gateway;
-}
-
-/** Test seam: swap in a fake gateway. */
-export function _setGatewayForTests(gw: SquareGateway): void {
-  gateway = gw;
-}
-
-/** Test seam: drop the fake so the next call rebuilds the real gateway. */
-export function _resetGatewayForTests(): void {
-  gateway = null;
-}
 
 export async function POST(request: Request): Promise<Response> {
   let body: unknown;
