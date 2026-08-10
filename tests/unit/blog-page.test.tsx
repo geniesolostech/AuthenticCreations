@@ -34,7 +34,7 @@ describe('/blog', () => {
 
     render(await BlogPage());
 
-    expect(screen.getByText(/stories are on their way, check back soon/i)).toBeInTheDocument();
+    expect(screen.getByText(/stories are on their way\. Check back soon\./i)).toBeInTheDocument();
   });
 
   test('degrades to the empty state instead of crashing when Sanity throws', async () => {
@@ -42,6 +42,6 @@ describe('/blog', () => {
 
     render(await BlogPage());
 
-    expect(screen.getByText(/stories are on their way, check back soon/i)).toBeInTheDocument();
+    expect(screen.getByText(/stories are on their way\. Check back soon\./i)).toBeInTheDocument();
   });
 });

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
@@ -114,17 +114,20 @@ describe('CustomOrderForm', () => {
     15000,
   );
 
-  test('the product picker is a labelled radiogroup of cards, one per product', () => {
+  test('the product picker is a labelled group of cards, one per product', () => {
     renderWithCart(<CustomOrderForm products={products} />);
 
-    const group = screen.getByRole('radiogroup');
+    const group = screen.getByRole('group', { name: /choose a piece/i });
     expect(group).toHaveAccessibleName(/choose a piece/i);
 
-    const cards = screen.getAllByRole('radio');
+    // Native <button>s (aria-pressed, not role="radio") — same pattern as
+    // ColorSwatchPicker, so Tab/Enter/Space work for free with no roving
+    // tabindex or arrow-key handling to reimplement.
+    const cards = within(group).getAllByRole('button');
     expect(cards).toHaveLength(3);
-    expect(screen.getByRole('radio', { name: /custom beanie/i })).toHaveAttribute('aria-checked', 'true');
-    expect(screen.getByRole('radio', { name: /custom scarf/i })).toHaveAttribute('aria-checked', 'false');
-    expect(screen.getByRole('radio', { name: /custom mittens/i })).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByRole('button', { name: /custom beanie/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /custom scarf/i })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: /custom mittens/i })).toHaveAttribute('aria-pressed', 'false');
   });
 
   test('clicking a product card selects it and switches the displayed price', async () => {
@@ -134,23 +137,23 @@ describe('CustomOrderForm', () => {
     // The big price display below the grid is the <p>; per-card prices are <span>s.
     expect(screen.getByText('$45.00', { selector: 'p' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('radio', { name: /custom scarf/i }));
+    await user.click(screen.getByRole('button', { name: /custom scarf/i }));
 
     expect(screen.getByText('$60.00', { selector: 'p' })).toBeInTheDocument();
     expect(screen.queryByText('$45.00', { selector: 'p' })).not.toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /custom scarf/i })).toHaveAttribute('aria-checked', 'true');
-    expect(screen.getByRole('radio', { name: /custom beanie/i })).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByRole('button', { name: /custom scarf/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /custom beanie/i })).toHaveAttribute('aria-pressed', 'false');
   });
 
   test('a product card can be selected via the keyboard', async () => {
     const user = userEvent.setup();
     renderWithCart(<CustomOrderForm products={products} />);
 
-    const scarfCard = screen.getByRole('radio', { name: /custom scarf/i });
+    const scarfCard = screen.getByRole('button', { name: /custom scarf/i });
     scarfCard.focus();
     await user.keyboard('{Enter}');
 
-    expect(scarfCard).toHaveAttribute('aria-checked', 'true');
+    expect(scarfCard).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText('$60.00', { selector: 'p' })).toBeInTheDocument();
   });
 
@@ -158,7 +161,7 @@ describe('CustomOrderForm', () => {
     const user = userEvent.setup();
     renderWithCart(<CustomOrderForm products={products} />);
 
-    await user.click(screen.getByRole('radio', { name: /custom mittens/i }));
+    await user.click(screen.getByRole('button', { name: /custom mittens/i }));
 
     expect(screen.getAllByText('Price at checkout').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /add to cart/i })).toBeDisabled();
@@ -174,7 +177,7 @@ describe('CustomOrderForm', () => {
     const user = userEvent.setup();
     renderWithCart(<CustomOrderForm products={products} />);
 
-    await user.click(screen.getByRole('radio', { name: /custom scarf/i }));
+    await user.click(screen.getByRole('button', { name: /custom scarf/i }));
     await user.click(screen.getByRole('button', { name: 'Green' }));
     await user.click(screen.getByRole('button', { name: /add to cart/i }));
 

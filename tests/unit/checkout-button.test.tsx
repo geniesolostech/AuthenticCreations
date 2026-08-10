@@ -323,7 +323,7 @@ describe('CheckoutButton — 503, 400 and network faults', () => {
     renderWithCart(<CheckoutButton />, [makeLine()]);
     await clickCheckout();
 
-    expect(screen.getByRole('alert')).toHaveTextContent(/square's having a moment, try again shortly/i);
+    expect(screen.getByRole('alert')).toHaveTextContent(/square's having a moment\. Try again shortly\./i);
     expect(readCartLines()).toHaveLength(1);
     expect(checkoutButton()).toBeEnabled();
     expect(assignLocation).not.toHaveBeenCalled();

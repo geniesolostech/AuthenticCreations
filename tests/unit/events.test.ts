@@ -12,9 +12,9 @@ import {
 
 describe('locked copy', () => {
   test('reads exactly as the brief writes it', () => {
-    expect(CIRCLE_FULL_MESSAGE).toBe('this circle is full 💛, check back for the next one');
+    expect(CIRCLE_FULL_MESSAGE).toBe('this circle is full 💛. Check back for the next one.');
     expect(NO_CIRCLES_MESSAGE).toBe(
-      'no circles on the calendar right now, follow the blog for the next one',
+      'no circles on the calendar right now. Follow the blog for the next one.',
     );
     expect(CIRCLE_MET_MESSAGE).toBe('this circle has already met');
   });

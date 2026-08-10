@@ -6,7 +6,7 @@ import Link from 'next/link';
 export default function CartEmpty({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex flex-col items-start gap-4 py-8">
-      <p className="font-body text-charcoal">{'your cart is empty, go find something cozy'}</p>
+      <p className="font-body text-charcoal">{'your cart is empty. Go find something cozy.'}</p>
       <div className="flex flex-wrap gap-4">
         <Link
           href="/shop/hats"

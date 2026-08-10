@@ -7,10 +7,10 @@
  */
 
 /** Every place a full circle is announced says it with these exact words. */
-export const CIRCLE_FULL_MESSAGE = 'this circle is full 💛, check back for the next one';
+export const CIRCLE_FULL_MESSAGE = 'this circle is full 💛. Check back for the next one.';
 /** `/community` with nothing on the calendar. */
 export const NO_CIRCLES_MESSAGE =
-  'no circles on the calendar right now, follow the blog for the next one';
+  'no circles on the calendar right now. Follow the blog for the next one.';
 /** A circle whose time has passed — shown instead of the RSVP form. */
 export const CIRCLE_MET_MESSAGE = 'this circle has already met';
 

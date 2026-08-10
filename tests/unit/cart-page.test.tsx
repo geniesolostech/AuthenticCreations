@@ -30,7 +30,7 @@ describe('/cart', () => {
   test('empty cart shows the cozy empty state and links to both shop sections', () => {
     renderWithCart(<CartPage />);
 
-    expect(screen.getByText(/your cart is empty, go find something cozy/i)).toBeInTheDocument();
+    expect(screen.getByText(/your cart is empty\. Go find something cozy\./i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /hats/i })).toHaveAttribute('href', '/shop/hats');
     expect(screen.getByRole('link', { name: /accessories/i })).toHaveAttribute('href', '/shop/accessories');
     expect(screen.getByRole('button', { name: /checkout/i })).toBeDisabled();

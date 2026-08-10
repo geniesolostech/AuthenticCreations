@@ -60,7 +60,7 @@ type Status =
 const MESSAGES = {
   soldOut: 'oh no, something in your cart just sold out.',
   priceChanged: "prices changed: the cart's been updated, take a look.",
-  unavailable: "Square's having a moment, try again shortly.",
+  unavailable: "Square's having a moment. Try again shortly.",
   offline: "we couldn't reach checkout; check your connection and try again.",
   generic: 'something looked off; please refresh and try again.',
 } as const;

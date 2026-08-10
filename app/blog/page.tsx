@@ -18,7 +18,7 @@ export default async function BlogPage() {
       <h1 className="font-heading text-3xl text-charcoal sm:text-4xl">From the Blog</h1>
 
       {posts.length === 0 ? (
-        <p className="mt-8 font-body text-charcoal">stories are on their way, check back soon</p>
+        <p className="mt-8 font-body text-charcoal">stories are on their way. Check back soon.</p>
       ) : (
         <div className="mt-8 grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
           {posts.map((post) => (

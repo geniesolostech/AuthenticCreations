@@ -69,7 +69,7 @@ describe('/community — the calendar', () => {
     render(await CommunityPage());
 
     expect(
-      screen.getByText('no circles on the calendar right now, follow the blog for the next one'),
+      screen.getByText('no circles on the calendar right now. Follow the blog for the next one.'),
     ).toBeInTheDocument();
   });
 
@@ -80,7 +80,7 @@ describe('/community — the calendar', () => {
     render(await CommunityPage());
 
     expect(
-      screen.getByText('no circles on the calendar right now, follow the blog for the next one'),
+      screen.getByText('no circles on the calendar right now. Follow the blog for the next one.'),
     ).toBeInTheDocument();
   });
 });
@@ -121,7 +121,7 @@ describe('/community — spots left', () => {
     render(await CommunityPage());
 
     expect(
-      screen.getByText('this circle is full 💛, check back for the next one'),
+      screen.getByText('this circle is full 💛. Check back for the next one.'),
     ).toBeInTheDocument();
   });
 

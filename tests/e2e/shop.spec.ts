@@ -130,8 +130,8 @@ test.describe('shop', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Custom Hats' })).toBeVisible();
 
     // Every product in the section gets a card, not just the customizable ones.
-    const ruffledCard = page.getByRole('radio', { name: new RegExp(RUFFLED_HAT.name, 'i') });
-    const beanieCard = page.getByRole('radio', { name: new RegExp(BEANIE.name, 'i') });
+    const ruffledCard = page.getByRole('button', { name: new RegExp(RUFFLED_HAT.name, 'i') });
+    const beanieCard = page.getByRole('button', { name: new RegExp(BEANIE.name, 'i') });
     await expect(ruffledCard).toBeVisible();
     await expect(beanieCard).toBeVisible();
 

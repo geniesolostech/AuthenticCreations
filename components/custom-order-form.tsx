@@ -83,7 +83,7 @@ export default function CustomOrderForm({ products }: CustomOrderFormProps) {
           Choose a piece
         </p>
         <div
-          role="radiogroup"
+          role="group"
           aria-labelledby="custom-product-heading"
           className="grid grid-cols-2 gap-3 sm:grid-cols-3"
         >
@@ -94,8 +94,7 @@ export default function CustomOrderForm({ products }: CustomOrderFormProps) {
               <button
                 key={product.id}
                 type="button"
-                role="radio"
-                aria-checked={isSelected}
+                aria-pressed={isSelected}
                 onClick={() => setProductId(product.id)}
                 className={`flex flex-col overflow-hidden rounded-xl border-2 bg-cream text-left transition ${
                   isSelected ? 'border-rust ring-2 ring-rust/40' : 'border-khaki hover:border-rust'

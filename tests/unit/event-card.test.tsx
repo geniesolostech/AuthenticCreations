@@ -53,7 +53,7 @@ describe('EventCard', () => {
     render(<EventCard event={EVENT} spotsLeft={0} />);
 
     expect(
-      screen.getByText('this circle is full 💛, check back for the next one'),
+      screen.getByText('this circle is full 💛. Check back for the next one.'),
     ).toBeInTheDocument();
   });
 
