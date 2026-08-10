@@ -5,7 +5,7 @@ import SiteFooter from '@/components/site-footer';
 test('header shows brand name and main nav', () => {
   render(<SiteHeader />);
   expect(screen.getByRole('link', { name: /authentic creations/i })).toHaveAttribute('href', '/');
-  for (const [name, href] of [['Hats', '/shop/hats'], ['Accessories', '/shop/accessories'], ['About', '/about'], ['Blog', '/blog'], ['Community', '/community']] as const) {
+  for (const [name, href] of [['Home', '/'], ['Hats', '/shop/hats'], ['Accessories', '/shop/accessories'], ['About', '/about'], ['Blog', '/blog'], ['Community', '/community']] as const) {
     expect(screen.getByRole('link', { name })).toHaveAttribute('href', href);
   }
 });
