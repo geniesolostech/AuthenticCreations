@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SquareGateway, VariationInfo } from '@/lib/square/gateway';
 import {
+  INVENTORY_CACHE_MAX_ENTRIES,
   SQUARE_LINE_ITEM_NOTE_MAX,
   createCheckout,
   makeInventoryService,
@@ -524,6 +525,66 @@ describe('makeInventoryService', () => {
     gw.failOn.getInventoryCounts = undefined;
     await expect(service.counts(['var-ready'])).resolves.toEqual({ 'var-ready': 5 });
     expect(gw.calls.getInventoryCounts).toHaveLength(2);
+  });
+
+  it('deletes expired entries rather than leaving them resident', async () => {
+    vi.useFakeTimers();
+    const gw = shopGateway();
+    const service = makeInventoryService(gw, 60_000);
+
+    await service.counts(['var-ready']);
+    expect(service._cacheSize()).toBe(1);
+
+    vi.advanceTimersByTime(60_001);
+    await service.counts(['var-custom']);
+
+    // The expired entry is swept on read, not merely shadowed when re-fetched:
+    // ids nobody asks for again must not stay resident for the process's life.
+    expect(service._cacheSize()).toBe(1);
+  });
+
+  it('never holds more entries than the bound, and still answers in full', async () => {
+    const gw = shopGateway().withVariation({
+      id: 'id-0',
+      priceCents: 100,
+      trackInventory: true,
+    });
+    gw.withCount('id-0', 1).withCount('id-9', 9);
+    const service = makeInventoryService(gw, 60_000, 3);
+    const ids = Array.from({ length: 10 }, (_, i) => `id-${i}`);
+
+    // Eviction runs after the response is built, so overflowing in a single
+    // call can never drop an id out of that call's answer.
+    await expect(service.counts(ids)).resolves.toEqual({ 'id-0': 1, 'id-9': 9 });
+    expect(service._cacheSize()).toBe(3);
+  });
+
+  it('evicts the oldest entries first', async () => {
+    vi.useFakeTimers();
+    const gw = shopGateway();
+    const service = makeInventoryService(gw, 60_000, 2);
+
+    await service.counts(['var-ready']);
+    await service.counts(['var-custom']);
+    await service.counts(['var-other']);
+    expect(service._cacheSize()).toBe(2);
+
+    // The two most recent are still cached; the oldest was evicted and refetches.
+    await service.counts(['var-other']);
+    expect(gw.calls.getInventoryCounts).toHaveLength(3);
+
+    await service.counts(['var-ready']);
+    expect(gw.calls.getInventoryCounts).toHaveLength(4);
+  });
+
+  it('bounds the cache at 500 entries by default', async () => {
+    const gw = shopGateway();
+    const service = makeInventoryService(gw);
+
+    await service.counts(Array.from({ length: 600 }, (_, i) => `id-${i}`));
+
+    expect(INVENTORY_CACHE_MAX_ENTRIES).toBe(500);
+    expect(service._cacheSize()).toBe(INVENTORY_CACHE_MAX_ENTRIES);
   });
 
   it('keeps caches independent between service instances', async () => {

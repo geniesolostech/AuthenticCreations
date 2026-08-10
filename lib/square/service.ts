@@ -22,6 +22,16 @@ export const SQUARE_LINE_ITEM_NOTE_MAX = 2000;
 /** Default lifetime of a cached inventory count. */
 export const INVENTORY_CACHE_TTL_MS = 60_000;
 
+/**
+ * Most entries the inventory cache may hold at once.
+ *
+ * The cache is keyed by whatever ids a caller asks about, and `/api/inventory`
+ * is public, so those keys are attacker-supplied: without a ceiling the map is
+ * an unbounded, process-lifetime memory leak that anyone can grow. Comfortably
+ * above a full catalogue, so real traffic never reaches it.
+ */
+export const INVENTORY_CACHE_MAX_ENTRIES = 500;
+
 export interface InventoryService {
   /**
    * Current on-hand counts for the given variation ids, keyed by id.
@@ -34,6 +44,12 @@ export interface InventoryService {
    * and reads live counts, because a stale count must never authorise a sale.
    */
   counts(ids: string[]): Promise<Record<string, number>>;
+
+  /**
+   * Entries currently resident in the cache. Exposed so the memory bound is
+   * observable from tests and diagnostics; application code has no use for it.
+   */
+  _cacheSize(): number;
 }
 
 interface CacheEntry {
@@ -43,15 +59,22 @@ interface CacheEntry {
 }
 
 /**
- * Builds an inventory reader with a per-id, time-boxed in-memory cache.
+ * Builds an inventory reader with a per-id, time-boxed, size-bounded in-memory
+ * cache.
  *
  * The cache is per instance (module-level singletons are the caller's choice)
  * and per id, so a request for `[a, b]` right after a request for `[a]` only
  * asks Square about `b`.
+ *
+ * Two rules keep it from growing without limit, which matters because the ids
+ * reaching it come from a public endpoint and are therefore caller-chosen:
+ * expired entries are swept on every read, and the map is trimmed to
+ * `maxEntries` at the end of every read.
  */
 export function makeInventoryService(
   gw: SquareGateway,
   ttlMs: number = INVENTORY_CACHE_TTL_MS,
+  maxEntries: number = INVENTORY_CACHE_MAX_ENTRIES,
 ): InventoryService {
   const cache = new Map<string, CacheEntry>();
 
@@ -59,16 +82,23 @@ export function makeInventoryService(
     async counts(ids: string[]): Promise<Record<string, number>> {
       const wanted = dedupe(ids);
       const now = Date.now();
-      const missing = wanted.filter((id) => {
-        const entry = cache.get(id);
-        return entry === undefined || entry.expiresAt <= now;
-      });
+
+      // Sweep first, so an id nobody asks about again cannot stay resident for
+      // the life of the process. After this, "present" means "live".
+      for (const [id, entry] of cache) {
+        if (entry.expiresAt <= now) cache.delete(id);
+      }
+      const missing = wanted.filter((id) => !cache.has(id));
 
       if (missing.length > 0) {
         // A throw here propagates and nothing is cached, so the next call retries.
         const fresh = await gw.getInventoryCounts(missing);
         const expiresAt = Date.now() + ttlMs;
         for (const id of missing) {
+          // Delete before set so the entry moves to the back of the map. With a
+          // fixed TTL that makes insertion order the same as expiry order, which
+          // is what lets `trim` evict the soonest-to-expire by taking the front.
+          cache.delete(id);
           cache.set(id, { count: fresh.get(id), expiresAt });
         }
       }
@@ -78,9 +108,26 @@ export function makeInventoryService(
         const entry = cache.get(id);
         if (entry?.count !== undefined) out[id] = entry.count;
       }
+
+      // Trimmed only once the answer is built, so a single oversized call still
+      // answers in full — eviction costs a future re-fetch, never a wrong count.
+      trim(cache, maxEntries);
       return out;
     },
+
+    _cacheSize(): number {
+      return cache.size;
+    },
   };
+}
+
+/** Drops the soonest-to-expire entries until at most `maxEntries` remain. */
+function trim(cache: Map<string, CacheEntry>, maxEntries: number): void {
+  if (cache.size <= maxEntries) return;
+  for (const id of cache.keys()) {
+    if (cache.size <= maxEntries) return;
+    cache.delete(id);
+  }
 }
 
 export type CheckoutResult =
