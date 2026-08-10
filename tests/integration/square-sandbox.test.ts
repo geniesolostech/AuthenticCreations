@@ -135,11 +135,27 @@ describe.skipIf(!CREDENTIALS_PRESENT)('Square Sandbox (live)', () => {
     });
   }, 30_000);
 
-  it('omits an id that is not in the catalog', async () => {
-    // Square answers a 200 with errors for unknown ids in some shapes; what
-    // matters to the app is that an unknown id never comes back priced.
-    const variations = await realGateway().getVariations([variationId]);
+  it('omits an id that is not in the catalog, and still prices the one that is', async () => {
+    // Both ids go in the *same* request, which is the whole point: asking only
+    // about the known id and then checking that some id we never mentioned is
+    // missing would pass against any implementation at all.
+    //
+    // What this pins down about real Square — and the reason it is worth a
+    // network call — is that an unknown object id is answered by *omission*:
+    // `batchGet` returns 200 with no `errors` payload, so `throwOnErrors` does
+    // not fire and the good id in the same batch still comes back priced. That
+    // matters because a single stale variation id in Sanity therefore costs one
+    // product its price, not the whole page's.
+    const variations = await realGateway().getVariations([
+      variationId,
+      'NOT-A-REAL-VARIATION-ID',
+    ]);
 
+    expect(variations.get(variationId)).toEqual({
+      id: variationId,
+      priceCents: PRICE_CENTS,
+      trackInventory: true,
+    });
     expect(variations.has('NOT-A-REAL-VARIATION-ID')).toBe(false);
   }, 30_000);
 
