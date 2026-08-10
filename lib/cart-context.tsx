@@ -40,10 +40,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // Persist every mutation, but only once we've hydrated so we don't clobber
-  // stored state with the initial empty array.
+  // stored state with the initial empty array. setItem can throw (e.g. quota
+  // exceeded in Safari private browsing); since CartProvider wraps the whole
+  // app, an uncaught throw here would take down more than just the cart, so
+  // we no-op on failure the same way the read path does.
   useEffect(() => {
     if (!hydrated) return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
+    } catch {
+      // Persistence is best-effort; in-memory cart state still works.
+    }
   }, [lines, hydrated]);
 
   const add = useCallback((line: Omit<CartLine, 'lineId'>) => {

@@ -123,4 +123,19 @@ describe('CartProvider / useCart persistence', () => {
 
     expect(await screen.findByTestId('count')).toHaveTextContent('0');
   });
+
+  test('does not throw when localStorage.setItem fails (e.g. quota exceeded)', async () => {
+    const user = userEvent.setup();
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+    });
+
+    render(createElement(CartProvider, null, createElement(CartConsumer)));
+
+    await user.click(screen.getByRole('button', { name: 'add' }));
+
+    expect(screen.getByTestId('count')).toHaveTextContent('1');
+
+    setItemSpy.mockRestore();
+  });
 });
