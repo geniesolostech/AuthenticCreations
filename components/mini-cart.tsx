@@ -151,16 +151,22 @@ export default function MiniCart() {
           )}
         </div>
 
-        {lines.length > 0 && (
-          <div className="flex flex-col gap-3 border-t border-linen px-5 py-4">
-            <div className="flex items-baseline justify-between">
-              <span className="font-body text-sm text-charcoal">Subtotal</span>
-              <span data-testid="cart-subtotal" className="font-heading text-xl text-charcoal">
-                {formatMoney(subtotal)}
-              </span>
-            </div>
-            <p className="font-body text-xs text-khaki">shipping &amp; tax calculated at checkout</p>
-            <CheckoutButton onSoldOutIds={setSoldOutIds} />
+        {/* The checkout button stays put even with nothing in the cart —
+            disabled, so the way out is always where the shopper left it. */}
+        <div className="flex flex-col gap-3 border-t border-linen px-5 py-4">
+          {lines.length > 0 && (
+            <>
+              <div className="flex items-baseline justify-between">
+                <span className="font-body text-sm text-charcoal">Subtotal</span>
+                <span data-testid="cart-subtotal" className="font-heading text-xl text-charcoal">
+                  {formatMoney(subtotal)}
+                </span>
+              </div>
+              <p className="font-body text-xs text-khaki">shipping &amp; tax calculated at checkout</p>
+            </>
+          )}
+          <CheckoutButton onSoldOutIds={setSoldOutIds} />
+          {lines.length > 0 && (
             <Link
               href="/cart"
               onClick={close}
@@ -168,8 +174,8 @@ export default function MiniCart() {
             >
               View cart
             </Link>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </>
   );

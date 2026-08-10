@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 import { useCart } from '@/lib/cart-context';
 import { MAX_CART_LINES } from '@/lib/constants';
@@ -9,6 +9,44 @@ import { assignLocation, reloadLocation } from '@/lib/navigate';
 /** How long the "prices were updated" notice sits before the page reloads —
  * long enough to read, short enough that nobody wonders what happened. */
 const PRICE_CHANGED_RELOAD_DELAY_MS = 2000;
+
+/**
+ * Whether a checkout POST is in flight, deliberately held *outside* React.
+ *
+ * Two situations make per-component state the wrong home for this flag, and
+ * both end the same way — two Square orders for one shopper:
+ *  - the mini-cart unmounts its whole subtree when it closes, so "click
+ *    Checkout, press Esc, reopen, click again" would meet a brand-new button
+ *    with a brand-new guard while the first POST is still open;
+ *  - `/cart` renders a button of its own, and the header trigger can open the
+ *    mini-cart on top of it, putting two live buttons on screen at once.
+ *
+ * Every mounted button subscribes, so they all show the same pending state
+ * rather than one of them silently swallowing clicks.
+ */
+let checkoutInFlight = false;
+const inFlightListeners = new Set<() => void>();
+
+function setCheckoutInFlight(value: boolean): void {
+  checkoutInFlight = value;
+  for (const listener of inFlightListeners) listener();
+}
+
+function subscribeInFlight(listener: () => void): () => void {
+  inFlightListeners.add(listener);
+  return () => {
+    inFlightListeners.delete(listener);
+  };
+}
+
+const getInFlight = () => checkoutInFlight;
+/** Server render: nothing can be in flight before the page is interactive. */
+const getInFlightOnServer = () => false;
+
+/** Test seam: the flag outlives any one component, so tests must reset it. */
+export function _resetCheckoutInFlightForTests(): void {
+  checkoutInFlight = false;
+}
 
 /**
  * Every way this button can end up not on Square's payment page. `soldOut`
@@ -49,19 +87,11 @@ export interface CheckoutButtonProps {
  */
 export default function CheckoutButton({ onSoldOutIds, className }: CheckoutButtonProps) {
   const { lines, remove } = useCart();
-  const [pending, setPending] = useState(false);
+  const pending = useSyncExternalStore(subscribeInFlight, getInFlight, getInFlightOnServer);
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
-  /** Guards against a second submit landing before React re-renders the
-   * disabled button — one click must never become two orders. */
-  const inFlight = useRef(false);
   const reloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(
-    () => () => {
-      if (reloadTimer.current !== null) clearTimeout(reloadTimer.current);
-    },
-    [],
-  );
+  useEffect(() => () => clearReloadTimer(), []);
 
   // Firefox and Safari restore this page — and this component's state — from
   // the bfcache when a shopper backs out of Square's payment page. Without
@@ -70,27 +100,37 @@ export default function CheckoutButton({ onSoldOutIds, className }: CheckoutButt
   useEffect(() => {
     function handlePageShow(event: PageTransitionEvent) {
       if (!event.persisted) return;
-      inFlight.current = false;
-      setPending(false);
+      setCheckoutInFlight(false);
     }
     window.addEventListener('pageshow', handlePageShow);
     return () => window.removeEventListener('pageshow', handlePageShow);
   }, []);
+
+  function clearReloadTimer() {
+    if (reloadTimer.current !== null) {
+      clearTimeout(reloadTimer.current);
+      reloadTimer.current = null;
+    }
+  }
 
   const overLimit = lines.length > MAX_CART_LINES;
   const disabled = pending || lines.length === 0 || overLimit;
 
   function fail(next: Status) {
     setStatus(next);
-    setPending(false);
-    inFlight.current = false;
+    setCheckoutInFlight(false);
   }
 
   async function handleClick() {
-    if (disabled || inFlight.current) return;
-    inFlight.current = true;
-    setPending(true);
+    // The module-level flag, not `pending`, is the guard: a second click can
+    // land in the same tick, before React has re-rendered the disabled button.
+    if (disabled || checkoutInFlight) return;
+    setCheckoutInFlight(true);
     setStatus({ kind: 'idle' });
+    // A reload armed by a previous PRICE_CHANGED must not survive this
+    // attempt: left running it would either double up with the next one or,
+    // worse, preempt the navigation to Square that this click is about to win.
+    clearReloadTimer();
     onSoldOutIds?.([]);
 
     let response: Response;
@@ -152,10 +192,7 @@ export default function CheckoutButton({ onSoldOutIds, className }: CheckoutButt
   }
 
   function handleReloadNow() {
-    if (reloadTimer.current !== null) {
-      clearTimeout(reloadTimer.current);
-      reloadTimer.current = null;
-    }
+    clearReloadTimer();
     reloadLocation();
   }
 

@@ -1,7 +1,7 @@
 import { act, fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import CheckoutButton from '@/components/checkout-button';
+import CheckoutButton, { _resetCheckoutInFlightForTests } from '@/components/checkout-button';
 import { MAX_CART_LINES } from '@/lib/constants';
 import { assignLocation, reloadLocation } from '@/lib/navigate';
 import { makeLine, readCartLines, renderWithCart } from '@/tests/helpers/cart-render';
@@ -31,6 +31,9 @@ async function clickCheckout() {
 
 beforeEach(() => {
   window.localStorage.clear();
+  // The in-flight guard is module state by design (it has to outlive an
+  // unmounted mini-cart), so it also outlives a test unless reset.
+  _resetCheckoutInFlightForTests();
 });
 
 afterEach(() => {
@@ -281,6 +284,47 @@ describe('CheckoutButton — 409 PRICE_CHANGED', () => {
       await vi.advanceTimersByTimeAsync(5000);
     });
     expect(reloadLocation).toHaveBeenCalledTimes(1);
+  });
+
+  test('a second PRICE_CHANGED replaces the armed reload instead of stacking one', async () => {
+    // A fresh Response per call: a body can only be read once, so a shared
+    // instance would make the second attempt look like a malformed reply.
+    vi.spyOn(global, 'fetch').mockImplementation(async () => json({ error: 'PRICE_CHANGED' }, 409));
+
+    renderWithCart(<CheckoutButton />, [makeLine()]);
+    await clickCheckout();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    await clickCheckout();
+
+    // Far enough for both the orphaned first timer (t+2000) and the second
+    // (t+2500) to have fired, had the first survived.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+
+    expect(reloadLocation).toHaveBeenCalledTimes(1);
+  });
+
+  test('a retry that reaches Square is not yanked back by the armed reload', async () => {
+    vi.spyOn(global, 'fetch')
+      .mockResolvedValueOnce(json({ error: 'PRICE_CHANGED' }, 409))
+      .mockResolvedValueOnce(json({ url: 'https://square.link/u/abc' }, 200));
+
+    renderWithCart(<CheckoutButton />, [makeLine()]);
+    await clickCheckout();
+    await clickCheckout();
+
+    expect(assignLocation).toHaveBeenCalledWith('https://square.link/u/abc');
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+
+    // A stale reload here would drag the shopper off the payment page.
+    expect(reloadLocation).not.toHaveBeenCalled();
   });
 
   test('unmounting cancels the pending reload', async () => {

@@ -23,7 +23,12 @@ export default function CartPage() {
       <h1 className="font-heading text-3xl text-charcoal sm:text-4xl">Your cart</h1>
 
       {lines.length === 0 ? (
-        <CartEmpty />
+        <>
+          <CartEmpty />
+          {/* Present but disabled: the plan keeps checkout where the shopper
+              expects it rather than making it appear out of nowhere. */}
+          <CheckoutButton className="items-start" />
+        </>
       ) : (
         <div className="mt-8 flex flex-col gap-8 lg:flex-row lg:items-start">
           <ul className="flex-1 divide-y divide-linen">

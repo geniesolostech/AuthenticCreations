@@ -2,6 +2,7 @@ import { act, fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import CartPage from '@/app/cart/page';
+import { _resetCheckoutInFlightForTests } from '@/components/checkout-button';
 import { makeLine, readCartLines, renderWithCart } from '@/tests/helpers/cart-render';
 
 vi.mock('@/lib/navigate', () => ({
@@ -11,6 +12,7 @@ vi.mock('@/lib/navigate', () => ({
 
 beforeEach(() => {
   window.localStorage.clear();
+  _resetCheckoutInFlightForTests();
 });
 
 afterEach(() => {
@@ -25,7 +27,7 @@ describe('/cart', () => {
     expect(screen.getByText(/your cart is empty — go find something cozy/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /hats/i })).toHaveAttribute('href', '/shop/hats');
     expect(screen.getByRole('link', { name: /accessories/i })).toHaveAttribute('href', '/shop/accessories');
-    expect(screen.queryByRole('button', { name: /checkout/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /checkout/i })).toBeDisabled();
   });
 
   test('lists the lines with an order summary and the shipping note', () => {

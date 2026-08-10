@@ -1,11 +1,17 @@
-import { act, screen, within } from '@testing-library/react';
+import { act, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import CartTrigger from '@/components/cart-trigger';
 import MiniCart from '@/components/mini-cart';
+import { _resetCheckoutInFlightForTests } from '@/components/checkout-button';
 import { makeLine, readCartLines, renderWithCart } from '@/tests/helpers/cart-render';
 import type { CartLine } from '@/lib/types';
+
+vi.mock('@/lib/navigate', () => ({
+  assignLocation: vi.fn(),
+  reloadLocation: vi.fn(),
+}));
 
 /** Trigger + panel together — how `app/layout.tsx` mounts them. */
 function renderCartUi(lines: CartLine[] = []) {
@@ -24,6 +30,14 @@ function panel() {
 
 beforeEach(() => {
   window.localStorage.clear();
+  // The in-flight guard lives at module scope on purpose, so it outlives a
+  // single test as readily as it outlives a single component.
+  _resetCheckoutInFlightForTests();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.clearAllMocks();
 });
 
 describe('CartTrigger', () => {
@@ -218,7 +232,36 @@ describe('MiniCart contents', () => {
     expect(scope.getByText(/your cart is empty — go find something cozy/i)).toBeInTheDocument();
     expect(scope.getByRole('link', { name: /hats/i })).toHaveAttribute('href', '/shop/hats');
     expect(scope.getByRole('link', { name: /accessories/i })).toHaveAttribute('href', '/shop/accessories');
-    expect(scope.queryByRole('button', { name: /checkout/i })).not.toBeInTheDocument();
+    expect(scope.getByRole('button', { name: /checkout/i })).toBeDisabled();
+  });
+});
+
+describe('MiniCart checkout guard', () => {
+  test('closing and reopening mid-flight cannot start a second checkout', async () => {
+    const user = userEvent.setup();
+    // A checkout that never settles: the first POST is still open the whole time.
+    const fetchMock = vi.spyOn(global, 'fetch').mockReturnValue(new Promise<Response>(() => {}));
+    renderCartUi([makeLine()]);
+
+    const trigger = screen.getByRole('button', { name: /cart/i });
+    await user.click(trigger);
+    await user.click(within(panel()).getByRole('button', { name: /^checkout$/i }));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // Esc unmounts the panel's whole subtree, CheckoutButton included.
+    await user.keyboard('{Escape}');
+    await user.click(trigger);
+
+    // The rebuilt button knows the first checkout is still running...
+    const reopened = within(panel()).getByRole('button', { name: /heading to checkout/i });
+    expect(reopened).toBeDisabled();
+
+    // ...and a click forced past the disabled attribute still sends nothing.
+    await act(async () => {
+      fireEvent.click(reopened);
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 
