@@ -48,4 +48,19 @@ describe('PostCard', () => {
     render(<PostCard post={post} />);
     expect(screen.queryByText(/notes from a cozy weekend/i)).not.toBeInTheDocument();
   });
+
+  test('with a quiltIndex, wears the rotation frame, fill, and card shadow', () => {
+    render(<PostCard post={basePost} quiltIndex={3} />);
+
+    const card = screen.getByRole('link');
+    expect(card).toHaveClass('border-plum', 'bg-plum-tint', 'shadow-card');
+  });
+
+  test('without a quiltIndex, gets the card shadow but no rotation frame', () => {
+    render(<PostCard post={basePost} />);
+
+    const card = screen.getByRole('link');
+    expect(card).toHaveClass('shadow-card');
+    expect(card).not.toHaveClass('border-plum');
+  });
 });

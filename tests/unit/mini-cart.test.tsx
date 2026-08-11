@@ -79,6 +79,15 @@ describe('MiniCart open/close', () => {
     expect(panel()).toBeInTheDocument();
   });
 
+  test('the panel has the card shadow, no color play (Woven spec §3)', async () => {
+    const user = userEvent.setup();
+    renderCartUi([makeLine()]);
+
+    await user.click(screen.getByRole('button', { name: /cart/i }));
+
+    expect(panel()).toHaveClass('shadow-card');
+  });
+
   test('opens on the header trigger click', async () => {
     const user = userEvent.setup();
     renderCartUi([makeLine()]);

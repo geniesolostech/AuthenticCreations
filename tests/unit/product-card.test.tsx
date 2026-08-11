@@ -54,4 +54,19 @@ describe('ProductCard', () => {
 
     expect(screen.queryByText(/sold out/i)).not.toBeInTheDocument();
   });
+
+  test('with a quiltIndex, wears the rotation frame, fill, and card shadow', () => {
+    render(<ProductCard product={baseProduct} priceCents={4500} soldOut={false} quiltIndex={1} />);
+
+    const card = screen.getByRole('link');
+    expect(card).toHaveClass('border-rose', 'bg-rose-tint', 'shadow-card');
+  });
+
+  test('without a quiltIndex, gets the card shadow but no rotation frame', () => {
+    render(<ProductCard product={baseProduct} priceCents={4500} soldOut={false} />);
+
+    const card = screen.getByRole('link');
+    expect(card).toHaveClass('shadow-card');
+    expect(card).not.toHaveClass('border-rose');
+  });
 });

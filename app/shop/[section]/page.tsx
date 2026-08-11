@@ -64,7 +64,7 @@ export default async function ShopSectionPage({
         })}
         <Link
           href={`/shop/${section}/custom`}
-          className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-khaki bg-linen px-4 py-8 text-center transition hover:border-rust"
+          className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-rose bg-linen px-4 py-8 text-center transition hover:border-rust"
         >
           <span className="font-heading text-lg text-charcoal">
             Want it in <em>your</em> colors?

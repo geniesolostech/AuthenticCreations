@@ -49,6 +49,13 @@ describe('/cart', () => {
     expect(screen.getByRole('button', { name: /checkout/i })).toBeEnabled();
   });
 
+  test('the order-summary container has the card shadow, no color play (Woven spec §3)', () => {
+    renderWithCart(<CartPage />, [makeLine({ name: 'Crochet Beanie' })]);
+
+    const summaryHeading = screen.getByRole('heading', { name: /order summary/i });
+    expect(summaryHeading.parentElement).toHaveClass('shadow-card');
+  });
+
   test('the quantity stepper on the page updates the summary', async () => {
     renderWithCart(<CartPage />, [makeLine({ unitAmount: 3200, quantity: 1 })]);
 

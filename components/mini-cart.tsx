@@ -111,7 +111,7 @@ export default function MiniCart() {
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-cream shadow-xl"
+        className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-cream shadow-card"
       >
         <div className="flex items-center justify-between border-b border-linen px-5 py-4">
           <h2 id={titleId} className="font-heading text-xl text-charcoal">

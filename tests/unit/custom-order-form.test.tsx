@@ -241,4 +241,27 @@ describe('CustomOrderForm', () => {
       expect(screen.getByRole('button', { name: color })).toBeInTheDocument();
     }
   });
+
+  test('unselected product-picker cards wear the quilt rotation frame and fill (Woven spec §3)', () => {
+    renderWithCart(<CustomOrderForm products={products} />);
+
+    // Custom Beanie (index 0) is selected by default, so index 1/2 are the
+    // unselected ones to check against QUILT_ROTATION.
+    expect(screen.getByRole('button', { name: /custom scarf/i })).toHaveClass(
+      'border-rose',
+      'bg-rose-tint',
+    );
+    expect(screen.getByRole('button', { name: /custom mittens/i })).toHaveClass(
+      'border-sage',
+      'bg-sage-tint',
+    );
+  });
+
+  test('the selected product-picker card keeps the rust selection style, not a quilt frame', () => {
+    renderWithCart(<CustomOrderForm products={products} />);
+
+    const beanieCard = screen.getByRole('button', { name: /custom beanie/i });
+    expect(beanieCard).toHaveClass('border-rust');
+    expect(beanieCard).not.toHaveClass('border-mustard');
+  });
 });

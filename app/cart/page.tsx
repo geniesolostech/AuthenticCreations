@@ -46,7 +46,7 @@ export default function CartPage() {
             ))}
           </ul>
 
-          <div className="flex w-full flex-col gap-3 rounded-2xl bg-linen p-5 lg:w-80">
+          <div className="flex w-full flex-col gap-3 rounded-2xl bg-linen p-5 shadow-card lg:w-80">
             <h2 className="font-heading text-lg text-charcoal">Order summary</h2>
             <div className="flex items-baseline justify-between">
               <span className="font-body text-sm text-charcoal">Subtotal</span>
