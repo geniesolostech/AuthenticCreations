@@ -89,11 +89,26 @@
    owns the actual fade-and-rise animation and its per-child stagger delay.
    Scoped to direct children of .reveal-grid (child combinator, not a bare
    descendant selector) so it can never apply to elements outside a
-   RevealGrid wrapper. */
+   RevealGrid wrapper.
+
+   This block sits outside any @layer, same as the rest of this file below
+   the @theme blocks — and Tailwind's utilities (transition-shadow,
+   duration-200, etc., used by the quilt card hover shadow — see
+   --shadow-card above) are emitted inside `@layer utilities`. Per the CSS
+   cascade-layers spec, ANY unlayered declaration outranks ANY layered one
+   regardless of selector specificity, so this rule's `transition` shorthand
+   would otherwise silently overwrite `transition-property` back down to
+   just `opacity, transform` on every card that is both a RevealGrid child
+   and has `transition-shadow duration-200` — snapping the 200ms hover
+   shadow instead of easing it. (Moving this block into `@layer components`
+   would just invert the problem: Tailwind's utilities would then always
+   beat it.) `box-shadow 0.2s ease` is re-declared here, matching the card's
+   own duration-200, purely so this rule's transition-property list stays a
+   superset of every card variant's instead of clobbering it. */
 .reveal-grid > * {
   opacity: 0;
   transform: translateY(12px);
-  transition: opacity 0.4s ease, transform 0.4s ease;
+  transition: opacity 0.4s ease, transform 0.4s ease, box-shadow 0.2s ease;
 }
 
 .reveal-grid[data-revealed='true'] > * {
