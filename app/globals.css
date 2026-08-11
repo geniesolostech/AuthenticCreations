@@ -82,3 +82,48 @@
   --font-body: var(--font-nunito-sans);
   --font-script: var(--font-caveat);
 }
+
+/* --- Woven: entrance stagger (spec §5) ---
+   RevealGrid (components/reveal-grid.tsx) toggles data-revealed via the
+   useReveal IntersectionObserver hook (lib/use-reveal.ts); this stylesheet
+   owns the actual fade-and-rise animation and its per-child stagger delay.
+   Scoped to direct children of .reveal-grid (child combinator, not a bare
+   descendant selector) so it can never apply to elements outside a
+   RevealGrid wrapper. */
+.reveal-grid > * {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.reveal-grid[data-revealed='true'] > * {
+  opacity: 1;
+  transform: none;
+}
+
+/* ~60ms ripple across the first 12 children; anything past that shares the
+   12th item's 660ms delay rather than growing unbounded. */
+.reveal-grid[data-revealed='true'] > *:nth-child(1) { transition-delay: 0ms; }
+.reveal-grid[data-revealed='true'] > *:nth-child(2) { transition-delay: 60ms; }
+.reveal-grid[data-revealed='true'] > *:nth-child(3) { transition-delay: 120ms; }
+.reveal-grid[data-revealed='true'] > *:nth-child(4) { transition-delay: 180ms; }
+.reveal-grid[data-revealed='true'] > *:nth-child(5) { transition-delay: 240ms; }
+.reveal-grid[data-revealed='true'] > *:nth-child(6) { transition-delay: 300ms; }
+.reveal-grid[data-revealed='true'] > *:nth-child(7) { transition-delay: 360ms; }
+.reveal-grid[data-revealed='true'] > *:nth-child(8) { transition-delay: 420ms; }
+.reveal-grid[data-revealed='true'] > *:nth-child(9) { transition-delay: 480ms; }
+.reveal-grid[data-revealed='true'] > *:nth-child(10) { transition-delay: 540ms; }
+.reveal-grid[data-revealed='true'] > *:nth-child(11) { transition-delay: 600ms; }
+.reveal-grid[data-revealed='true'] > *:nth-child(12) { transition-delay: 660ms; }
+.reveal-grid[data-revealed='true'] > *:nth-child(n+13) { transition-delay: 660ms; }
+
+/* Fully inert under reduced motion: final state, no transition, and
+   !important so it wins regardless of data-revealed (SSR/E2E safety —
+   nothing should ever be stuck invisible for a reduced-motion visitor). */
+@media (prefers-reduced-motion: reduce) {
+  .reveal-grid > * {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
