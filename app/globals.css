@@ -13,7 +13,65 @@
   --color-charcoal: #3a3734;
   --color-khaki: #a98f68;
   --color-olive: #6b7245;
+
+  /* --- Woven: structure tier (spec §2) — may cover large areas --- */
+  --color-terracotta: #a94e1f; /* deep call-to-attention structure (badges on light, hero gradient end) */
+  --color-mustard: #c9921b; /* warm frame color, decorative */
+  --color-olive-deep: #5c6b3c; /* sold-out badge bg, dark structure accents */
+  --color-clay: #b8764a; /* warm frame color */
+  --color-sand: #efe0c3; /* hero/section band base */
+  --color-sand-deep: #e9cfa3; /* hero gradient end */
+  --color-sage-band: #e4ead8; /* tinted section band (Meet CJ) */
+
+  /* --- Woven: accent tier (spec §2) — yarn colors, small doses only:
+     frames, badges, underlines, motifs; NEVER full section backgrounds --- */
+  --color-rose: #c4788a; /* accent tier — small doses only */
+  --color-plum: #6d5382; /* accent tier — small doses only */
+  --color-sage: #96a97c; /* accent tier — small doses only */
+  --color-golden: #e3b341; /* accent tier — small doses only */
+
+  /* Tinted card fills — 8-12% mixes of the accent (or a structure warm)
+     over cream, defined as tokens rather than ad-hoc. */
+  --color-rose-tint: #f5e6ea; /* accent tier — small doses only */
+  --color-plum-tint: #ebe4f1; /* accent tier — small doses only */
+  --color-sage-tint: #eaf0e2; /* accent tier — small doses only */
+  --color-golden-tint: #f7eed8; /* accent tier — small doses only */
+  --color-mustard-tint: #f7eed8; /* accent tier — small doses only */
+  --color-clay-tint: #f3e6db; /* accent tier — small doses only */
+
+  /* --- Woven: card depth (spec §5) — charcoal-tinted shadows, never
+     gray-blue. Applied to product/event/post/custom cards; hover
+     transition 200ms ease. --- */
+  --shadow-card: 0 2px 8px rgb(58 55 52 / 0.10), 0 1px 3px rgb(58 55 52 / 0.08);
+  --shadow-card-hover: 0 6px 20px rgb(58 55 52 / 0.14), 0 2px 6px rgb(58 55 52 / 0.10);
 }
+
+/* --- Woven: contrast evidence (spec §2 "Contrast rules (hard)") ---
+   WCAG 2.x relative-luminance contrast ratios, computed with a throwaway
+   Node script (not eyeballed) implementing the standard sRGB relative
+   luminance + contrast-ratio formulas. Body-text pairs must be >= 4.5:1;
+   any failure requires darkening the background token and recording the
+   adjusted hex here. All pairs below pass, so no token was darkened.
+
+   charcoal #3a3734 on:
+     sand        #efe0c3  -> 9.08:1  PASS
+     sand-deep   #e9cfa3  -> 7.84:1  PASS
+     sage-band   #e4ead8  -> 9.61:1  PASS
+     rose-tint   #f5e6ea  -> 9.79:1  PASS
+     plum-tint   #ebe4f1  -> 9.52:1  PASS
+     sage-tint   #eaf0e2  -> 10.17:1 PASS
+     golden-tint #f7eed8  -> 10.23:1 PASS
+     mustard-tint #f7eed8 -> 10.23:1 PASS
+     clay-tint   #f3e6db  -> 9.66:1  PASS
+
+   white #ffffff on:
+     terracotta  #a94e1f  -> 5.53:1  PASS
+     olive-deep  #5c6b3c  -> 5.80:1  PASS
+     plum        #6d5382  -> 6.54:1  PASS
+
+   plum #6d5382 on:
+     plum-tint   #ebe4f1  -> 5.26:1  PASS  (spec §3 "N spots left" text)
+*/
 
 /* Font tokens are aliased (not redeclared) from the CSS variables next/font
    sets on <html> in app/layout.tsx, so `@theme inline` substitutes the
