@@ -35,7 +35,7 @@ All existing tokens remain. New tokens join `app/globals.css` `@theme` in two ti
 | `--color-sage` | `#96A97C` | frames, underline rotation |
 | `--color-golden` | `#E3B341` | frames, underline rotation |
 
-Tinted card fills: 8–12% mixes of the accent over cream (e.g. rose-tint `#F5E6EA`, plum-tint `#EBE4F1`, sage-tint `#EAF0E2`, golden-tint `#F7EED8`) — defined as tokens, not ad-hoc.
+Tinted card fills: 8–12% mixes of the accent over cream (e.g. rose-tint `#F5E6EA`, plum-tint `#EBE4F1`, sage-tint `#EAF0E2`, golden-tint `#F8EECC`) — defined as tokens, not ad-hoc.
 
 **Contrast rules (hard):** body text on any band/fill pairs charcoal-on-light only, ≥ 4.5:1 verified. White text allowed only on terracotta, olive-deep, plum, charcoal (all ≥ 4.5:1 for the sizes used). Rust remains the only interactive/action color. Any pair failing WCAG AA gets darkened at implementation time and the final hex recorded in globals.css comments.
 

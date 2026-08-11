@@ -35,7 +35,7 @@
   --color-rose-tint: #f5e6ea; /* accent tier — small doses only */
   --color-plum-tint: #ebe4f1; /* accent tier — small doses only */
   --color-sage-tint: #eaf0e2; /* accent tier — small doses only */
-  --color-golden-tint: #f7eed8; /* accent tier — small doses only */
+  --color-golden-tint: #f8eecc; /* accent tier — small doses only */
   --color-mustard-tint: #f7eed8; /* accent tier — small doses only */
   --color-clay-tint: #f3e6db; /* accent tier — small doses only */
 
@@ -60,7 +60,7 @@
      rose-tint   #f5e6ea  -> 9.79:1  PASS
      plum-tint   #ebe4f1  -> 9.52:1  PASS
      sage-tint   #eaf0e2  -> 10.17:1 PASS
-     golden-tint #f7eed8  -> 10.23:1 PASS
+     golden-tint #f8eecc  -> 10.19:1 PASS
      mustard-tint #f7eed8 -> 10.23:1 PASS
      clay-tint   #f3e6db  -> 9.66:1  PASS
 
