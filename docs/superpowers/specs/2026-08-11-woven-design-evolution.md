@@ -42,7 +42,7 @@ Tinted card fills: 8–12% mixes of the accent over cream (e.g. rose-tint `#F5E6
 ## 3. Surface application, page by page
 
 - **Home:** hero on `linear-gradient(135deg, sand, sand-deep)`; Featured on cream; Meet CJ on sage-band; Next event on sand; Latest posts on cream; footer charcoal (unchanged).
-- **Shop grids (+ home Featured, custom pickers):** "quilt" card treatment — each card gets a 2px frame + matching tinted fill, rotating through `[mustard, rose, sage, plum, clay, golden]` **deterministically by grid index** (stable across renders/visits; SSR-safe — no randomness). Sold-out badge: white on olive-deep. Custom-order banner card: dashed border switches to rose.
+- **Shop grids (+ home Featured, custom pickers):** "quilt" card treatment — each card gets a 2px frame + matching tinted fill, rotating through `[mustard, rose, sage, plum, clay, golden]` **deterministically by grid index** (stable across renders/visits; SSR-safe — no randomness). Sold-out badge: cream on olive-deep. Custom-order banner card: dashed border switches to rose.
 - **Product detail:** gallery/panel unchanged except card shadow; buy button stays rust.
 - **Community:** event cards on tinted fills (rotation), "N spots left" text plum, RSVP form unchanged.
 - **Blog:** post cards framed + tinted like the shop quilt.
