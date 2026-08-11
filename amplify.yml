@@ -50,6 +50,14 @@ frontend:
         - npm ci
     build:
       commands:
+        # Amplify injects console variables into this BUILD shell, but the
+        # SSR compute runtime gets none of them — server code reading
+        # process.env at request time (Square gateway, Sanity write client)
+        # sees nothing and fails closed. Next's server loads .env.production
+        # at start, so persist exactly the server-side variables into the
+        # artifact here. NEXT_PUBLIC_* values need no line: Next inlines them
+        # into the emitted JavaScript during `npm run build`.
+        - env | grep -e '^SQUARE_ACCESS_TOKEN=' -e '^SQUARE_ENVIRONMENT=' -e '^SQUARE_LOCATION_ID=' -e '^SANITY_API_WRITE_TOKEN=' >> .env.production
         - npm run build
   artifacts:
     # Amplify's Next.js SSR deployment reads the whole .next directory.
