@@ -44,4 +44,32 @@ describe('/blog', () => {
 
     expect(screen.getByText(/stories are on their way\. Check back soon\./i)).toBeInTheDocument();
   });
+
+  test('h1 pairs a motif with a sage underline (Woven spec §3/§4)', async () => {
+    mockedGetPosts.mockResolvedValue([]);
+
+    render(await BlogPage());
+
+    const heading = screen.getByRole('heading', { level: 1 });
+    const motif = screen.getByTestId('granny-motif');
+    expect(heading.parentElement).toContainElement(motif);
+    expect(screen.getByTestId('yarn-underline').querySelector('path')).toHaveClass('stroke-sage');
+  });
+
+  test('the grid rotates quilt frames by position and is wrapped for the entrance stagger', async () => {
+    const posts: PostSummary[] = [
+      { _id: '1', title: 'First Post', slug: 'first-post' },
+      { _id: '2', title: 'Second Post', slug: 'second-post' },
+      { _id: '3', title: 'Third Post', slug: 'third-post' },
+    ];
+    mockedGetPosts.mockResolvedValue(posts);
+
+    render(await BlogPage());
+
+    const cards = screen.getAllByRole('link', { name: /(first|second|third) post/i });
+    expect(cards[0]).toHaveClass('border-mustard');
+    expect(cards[1]).toHaveClass('border-rose');
+    expect(cards[2]).toHaveClass('border-sage');
+    expect(document.querySelector('.reveal-grid')).not.toBeNull();
+  });
 });

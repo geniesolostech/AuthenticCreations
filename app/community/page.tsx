@@ -2,6 +2,9 @@ import Link from 'next/link';
 
 import EventCard from '@/components/event-card';
 import EventDateTime from '@/components/event-date-time';
+import GrannyCornerMotif from '@/components/granny-corner-motif';
+import RevealGrid from '@/components/reveal-grid';
+import YarnUnderline from '@/components/yarn-underline';
 import { NO_CIRCLES_MESSAGE, spotsRemaining } from '@/lib/events';
 import { getPastEvents, getRsvpCount, getUpcomingEvents, type EventDoc } from '@/lib/sanity/queries';
 
@@ -46,7 +49,14 @@ export default async function CommunityPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
-      <h1 className="font-heading text-3xl text-charcoal sm:text-4xl">Community</h1>
+      {/* Woven spec §3/§4: page-title motif + plum underline. */}
+      <div className="inline-flex flex-col gap-1">
+        <div className="flex items-center gap-3">
+          <h1 className="font-heading text-3xl text-charcoal sm:text-4xl">Community</h1>
+          <GrannyCornerMotif size="sm" />
+        </div>
+        <YarnUnderline color="plum" />
+      </div>
       <p className="mt-3 font-body text-charcoal">
         Cozy virtual crochet circles: bring your yarn, a warm drink, and whatever you&apos;re
         working on. Save a seat with just your name and email; CJ sends the call link before we
@@ -56,11 +66,11 @@ export default async function CommunityPage() {
       {upcoming.length === 0 ? (
         <p className="mt-8 font-body text-charcoal">{NO_CIRCLES_MESSAGE}</p>
       ) : (
-        <div className="mt-8 grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
+        <RevealGrid className="mt-8 grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
           {upcoming.map((event, index) => (
-            <EventCard key={event._id} event={event} spotsLeft={spots[index]} />
+            <EventCard key={event._id} event={event} spotsLeft={spots[index]} quiltIndex={index} />
           ))}
-        </div>
+        </RevealGrid>
       )}
 
       {past.length > 0 && (

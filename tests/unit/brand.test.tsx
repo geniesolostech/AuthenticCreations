@@ -21,6 +21,16 @@ test('footer shows tagline and policies link', () => {
   expect(screen.getByRole('link', { name: /shipping & returns/i })).toHaveAttribute('href', '/policies');
 });
 
+test('footer shows an md crochet motif above the tagline (Woven spec §4)', () => {
+  render(<SiteFooter />);
+  const motif = screen.getByTestId('granny-motif');
+  expect(motif).toHaveAttribute('width', '56');
+  expect(motif).toHaveAttribute('height', '56');
+
+  const tagline = screen.getByText(/find you in whatever you do/i);
+  expect(motif.compareDocumentPosition(tagline) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
+
 test('globals.css @theme defines the Woven structure + accent token set', () => {
   const expectedTokens = [
     // structure tier (spec §2)

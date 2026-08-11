@@ -57,4 +57,14 @@ describe('/about', () => {
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
     expect(screen.getByText(/check back soon/i)).toBeInTheDocument();
   });
+
+  test('has exactly one motif and one golden underline beside the heading (Woven spec §3)', async () => {
+    mockedGetAboutPage.mockResolvedValue(null);
+
+    render(await AboutPage());
+
+    expect(screen.getAllByTestId('granny-motif')).toHaveLength(1);
+    const underline = screen.getByTestId('yarn-underline');
+    expect(underline.querySelector('path')).toHaveClass('stroke-golden');
+  });
 });

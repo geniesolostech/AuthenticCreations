@@ -104,11 +104,19 @@
    would just invert the problem: Tailwind's utilities would then always
    beat it.) `box-shadow 0.2s ease` is re-declared here, matching the card's
    own duration-200, purely so this rule's transition-property list stays a
-   superset of every card variant's instead of clobbering it. */
+   superset of every card variant's instead of clobbering it.
+
+   Task 5 wired the custom-order-form picker grid into RevealGrid too — its
+   cards use a bare Tailwind `transition` (transition-property including
+   border-color and background-color, for the `hover:border-rust` frame and
+   the selected/unselected class swap), not `transition-shadow`. Same
+   clobbering risk, so `border-color`/`background-color` join the list below
+   for the same reason box-shadow did. */
 .reveal-grid > * {
   opacity: 0;
   transform: translateY(12px);
-  transition: opacity 0.4s ease, transform 0.4s ease, box-shadow 0.2s ease;
+  transition: opacity 0.4s ease, transform 0.4s ease, box-shadow 0.2s ease,
+    border-color 0.2s ease, background-color 0.2s ease;
 }
 
 .reveal-grid[data-revealed='true'] > * {

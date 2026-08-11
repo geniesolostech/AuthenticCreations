@@ -28,6 +28,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${fraunces.variable} ${nunitoSans.variable} ${caveat.variable}`}
     >
       <body className="flex min-h-screen flex-col bg-cream text-charcoal font-body">
+        {/* Carried finding from Task 4's review: `.reveal-grid > *` starts
+            every grid item at opacity:0 until an IntersectionObserver fires
+            client-side (lib/use-reveal.ts) — a visitor with JS disabled
+            never gets that callback, so this forces those items visible. */}
+        <noscript>
+          <style>{`.reveal-grid > *{opacity:1!important;transform:none!important}`}</style>
+        </noscript>
         <CartProvider>
           <SiteHeader>
             <CartTrigger />

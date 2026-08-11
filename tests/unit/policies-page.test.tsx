@@ -55,4 +55,14 @@ describe('/policies', () => {
 
     expect(screen.getByText(COOKIE_SENTENCE)).toBeInTheDocument();
   });
+
+  test('has a golden underline and zero motifs (Woven spec §3)', async () => {
+    mockedGetPoliciesPage.mockResolvedValue(null);
+
+    render(await PoliciesPage());
+
+    expect(screen.queryAllByTestId('granny-motif')).toHaveLength(0);
+    const underline = screen.getByTestId('yarn-underline');
+    expect(underline.querySelector('path')).toHaveClass('stroke-golden');
+  });
 });

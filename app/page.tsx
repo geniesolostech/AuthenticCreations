@@ -1,10 +1,13 @@
 import Link from 'next/link';
 
 import EventCard from '@/components/event-card';
+import GrannyCornerMotif from '@/components/granny-corner-motif';
 import Hero from '@/components/hero';
 import PlaceholderImage from '@/components/placeholder-image';
 import PostCard from '@/components/post-card';
 import ProductCard from '@/components/product-card';
+import RevealGrid from '@/components/reveal-grid';
+import YarnUnderline from '@/components/yarn-underline';
 import { isSoldOut } from '@/lib/inventory-status';
 import {
   getAboutPage,
@@ -109,20 +112,36 @@ export default async function Home() {
 
       {featured.length > 0 && (
         <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-          <h2 className="font-heading text-2xl text-charcoal sm:text-3xl">Featured pieces</h2>
-          <div className="mt-6 grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-4">
-            {featured.map((item) => {
+          {/* Woven spec §3/§4: motif on the left (first section in the
+              left/right alternation), rose underline. */}
+          <div className="inline-flex flex-col gap-1">
+            <div className="flex items-center gap-3">
+              <h2 className="font-heading text-2xl text-charcoal sm:text-3xl">Featured pieces</h2>
+              <GrannyCornerMotif size="sm" className="order-first" />
+            </div>
+            <YarnUnderline color="rose" />
+          </div>
+          <RevealGrid className="mt-6 grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-4">
+            {featured.map((item, index) => {
               const id = primaryVariationId(item);
               const info = id ? variations.get(id) : undefined;
               const priceCents = info?.priceCents ?? null;
               const soldOut = info ? isSoldOut(info.trackInventory, counts[id]) : false;
-              return <ProductCard key={item._id} product={item} priceCents={priceCents} soldOut={soldOut} />;
+              return (
+                <ProductCard
+                  key={item._id}
+                  product={item}
+                  priceCents={priceCents}
+                  soldOut={soldOut}
+                  quiltIndex={index}
+                />
+              );
             })}
-          </div>
+          </RevealGrid>
         </section>
       )}
 
-      <section className="bg-linen">
+      <section className="bg-sage-band">
         <div className="mx-auto flex max-w-4xl flex-col items-center gap-6 px-4 py-12 text-center sm:px-6">
           <div className="h-32 w-32 shrink-0 overflow-hidden rounded-full bg-cream">
             {aboutPhotoUrl ? (
@@ -133,7 +152,15 @@ export default async function Home() {
             )}
           </div>
           <div>
-            <h2 className="font-heading text-2xl text-charcoal sm:text-3xl">{aboutHeading}</h2>
+            {/* Woven spec §3/§4: motif on the right (2nd section in the
+                left/right alternation), mustard underline. */}
+            <div className="inline-flex flex-col items-center gap-1">
+              <div className="flex items-center gap-3">
+                <h2 className="font-heading text-2xl text-charcoal sm:text-3xl">{aboutHeading}</h2>
+                <GrannyCornerMotif size="sm" className="order-last" />
+              </div>
+              <YarnUnderline color="mustard" />
+            </div>
             <p className="mt-3 font-body text-charcoal">{ABOUT_TEASER_BODY}</p>
             <Link
               href="/about"
@@ -146,20 +173,41 @@ export default async function Home() {
       </section>
 
       {nextEvent && (
-        <section className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
-          <h2 className="font-heading text-2xl text-charcoal sm:text-3xl">Next event</h2>
-          <div className="mt-6">
-            <EventCard event={nextEvent} />
+        <section className="bg-sand">
+          <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
+            {/* Woven spec §3/§4: motif on the left (3rd section in the
+                left/right alternation), sage underline. */}
+            <div className="inline-flex flex-col gap-1">
+              <div className="flex items-center gap-3">
+                <h2 className="font-heading text-2xl text-charcoal sm:text-3xl">Next event</h2>
+                <GrannyCornerMotif size="sm" className="order-first" />
+              </div>
+              <YarnUnderline color="sage" />
+            </div>
+            <div className="mt-6">
+              <EventCard event={nextEvent} />
+            </div>
           </div>
         </section>
       )}
 
       {posts.length > 0 && (
         <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-          <h2 className="font-heading text-2xl text-charcoal sm:text-3xl">Latest posts</h2>
+          {/* Woven spec §3/§4: motif on the right (4th section in the
+              left/right alternation), plum underline. Grid gets the quilt
+              rotation but is NOT wrapped in RevealGrid — the brief's wrap
+              list (carried Task 4 finding) names Featured, blog index,
+              community upcoming, and the custom picker only. */}
+          <div className="inline-flex flex-col gap-1">
+            <div className="flex items-center gap-3">
+              <h2 className="font-heading text-2xl text-charcoal sm:text-3xl">Latest posts</h2>
+              <GrannyCornerMotif size="sm" className="order-last" />
+            </div>
+            <YarnUnderline color="plum" />
+          </div>
           <div className="mt-6 grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
-            {posts.map((post) => (
-              <PostCard key={post._id} post={post} />
+            {posts.map((post, index) => (
+              <PostCard key={post._id} post={post} quiltIndex={index} />
             ))}
           </div>
         </section>

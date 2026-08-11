@@ -94,7 +94,7 @@ export default async function CommunityEventPage({
         <p className="mt-6 font-body leading-relaxed text-charcoal">{event.description}</p>
       ) : null}
 
-      {note ? <p className="mt-6 font-body text-sm font-semibold text-rust">{note}</p> : null}
+      {note ? <p className="mt-6 font-body text-sm font-semibold text-plum">{note}</p> : null}
 
       <div className="mt-8">
         {past ? (

@@ -1,5 +1,7 @@
+import GrannyCornerMotif from '@/components/granny-corner-motif';
 import PlaceholderImage from '@/components/placeholder-image';
 import RichText from '@/components/portable-text';
+import YarnUnderline from '@/components/yarn-underline';
 import { urlFor } from '@/lib/sanity/image';
 import { getAboutPage, type AboutPage as AboutPageDoc } from '@/lib/sanity/queries';
 
@@ -34,7 +36,17 @@ export default async function AboutPage() {
         )}
       </div>
 
-      <h1 className="text-center font-heading text-3xl text-charcoal sm:text-4xl">{heading}</h1>
+      {/* Woven spec §3: About stays calm — cream ground, only the heading
+          underline + ONE corner motif (golden). */}
+      <div className="text-center">
+        <div className="inline-flex flex-col items-center gap-1">
+          <div className="flex items-center gap-3">
+            <h1 className="font-heading text-3xl text-charcoal sm:text-4xl">{heading}</h1>
+            <GrannyCornerMotif size="sm" />
+          </div>
+          <YarnUnderline color="golden" />
+        </div>
+      </div>
 
       {hasBody ? (
         <div className="mt-8">

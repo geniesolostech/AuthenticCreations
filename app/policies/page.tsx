@@ -1,4 +1,5 @@
 import RichText from '@/components/portable-text';
+import YarnUnderline from '@/components/yarn-underline';
 import { getPoliciesPage, type PoliciesPage as PoliciesPageDoc } from '@/lib/sanity/queries';
 
 export const revalidate = 60;
@@ -25,7 +26,12 @@ export default async function PoliciesPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-      <h1 className="font-heading text-3xl text-charcoal sm:text-4xl">Shipping &amp; Returns</h1>
+      {/* Woven spec §3: Policies stays calm — cream ground, underline only,
+          no motif (golden). */}
+      <div className="inline-flex flex-col gap-1">
+        <h1 className="font-heading text-3xl text-charcoal sm:text-4xl">Shipping &amp; Returns</h1>
+        <YarnUnderline color="golden" />
+      </div>
 
       {hasBody ? (
         <div className="mt-8">

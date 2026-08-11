@@ -264,4 +264,14 @@ describe('CustomOrderForm', () => {
     expect(beanieCard).toHaveClass('border-rust');
     expect(beanieCard).not.toHaveClass('border-mustard');
   });
+
+  test('the picker grid is wrapped for the entrance stagger (Woven spec §5)', () => {
+    renderWithCart(<CustomOrderForm products={products} />);
+
+    const group = screen.getByRole('group', { name: /choose a piece/i });
+    expect(group.querySelector('.reveal-grid')).not.toBeNull();
+    // role/labelling stay on the outer group wrapper — RevealGrid only owns
+    // the reveal-grid class and grid layout, not the a11y semantics.
+    expect(group).not.toHaveClass('reveal-grid');
+  });
 });

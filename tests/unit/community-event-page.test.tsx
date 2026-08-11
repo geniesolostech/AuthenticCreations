@@ -63,7 +63,10 @@ describe('/community/[slug] — an upcoming circle', () => {
 
     render(await renderPage('august-circle'));
 
-    expect(screen.getByText('1 spot left')).toBeInTheDocument();
+    const note = screen.getByText('1 spot left');
+    expect(note).toBeInTheDocument();
+    expect(note).toHaveClass('text-plum');
+    expect(note).not.toHaveClass('text-rust');
     expect(screen.getByRole('button', { name: /save my seat/i })).toBeInTheDocument();
   });
 

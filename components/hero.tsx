@@ -14,7 +14,7 @@ import Link from 'next/link';
  */
 export default function Hero() {
   return (
-    <section className="bg-linen">
+    <section className="bg-[linear-gradient(135deg,var(--color-sand),var(--color-sand-deep))]">
       <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 px-4 py-8 text-center sm:px-6 sm:py-12">
         {/* Local /public asset — the app renders every image as a plain <img>
             rather than reaching for next/image (see components/product-card.tsx

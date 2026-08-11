@@ -1,11 +1,14 @@
 import Link from "next/link";
 
+import GrannyCornerMotif from "@/components/granny-corner-motif";
+
 const CONTACT_EMAIL = "hello@authenticcreationsco.com";
 
 export default function SiteFooter() {
   return (
     <footer className="bg-charcoal text-cream">
       <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-10 sm:px-6">
+        <GrannyCornerMotif size="md" />
         <p className="font-script text-3xl text-rust-soft">
           Find you in whatever you do.
         </p>

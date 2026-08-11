@@ -56,6 +56,31 @@ describe('/community — the calendar', () => {
     );
   });
 
+  test('h1 pairs a motif with a plum underline (Woven spec §3/§4)', async () => {
+    render(await CommunityPage());
+
+    const heading = screen.getByRole('heading', { level: 1 });
+    const motif = screen.getByTestId('granny-motif');
+    expect(heading.parentElement).toContainElement(motif);
+    expect(screen.getByTestId('yarn-underline').querySelector('path')).toHaveClass('stroke-plum');
+  });
+
+  test('the grid rotates quilt frames by position and is wrapped for the entrance stagger', async () => {
+    upcoming.mockResolvedValue([
+      AUGUST,
+      SEPTEMBER,
+      { ...AUGUST, _id: 'e3', title: 'October Crochet Circle', slug: 'october-circle' },
+    ]);
+
+    render(await CommunityPage());
+
+    const cards = screen.getAllByRole('link', { name: /crochet circle/i });
+    expect(cards[0]).toHaveClass('border-mustard');
+    expect(cards[1]).toHaveClass('border-rose');
+    expect(cards[2]).toHaveClass('border-sage');
+    expect(document.querySelector('.reveal-grid')).not.toBeNull();
+  });
+
   test('asks Sanity for events either side of one single "now"', async () => {
     await CommunityPage();
 
@@ -93,7 +118,10 @@ describe('/community — spots left', () => {
     render(await CommunityPage());
 
     expect(rsvpCount).toHaveBeenCalledWith('e1');
-    expect(screen.getByText('2 spots left')).toBeInTheDocument();
+    const note = screen.getByText('2 spots left');
+    expect(note).toBeInTheDocument();
+    expect(note).toHaveClass('text-plum');
+    expect(note).not.toHaveClass('text-rust');
   });
 
   test('stays quiet when the circle is roomy', async () => {

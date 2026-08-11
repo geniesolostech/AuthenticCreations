@@ -38,7 +38,7 @@ export default function EventCard({ event, spotsLeft = null, quiltIndex }: Event
       {event.description ? (
         <p className="font-body text-sm text-charcoal">{event.description}</p>
       ) : null}
-      {note ? <p className="font-body text-sm font-semibold text-rust">{note}</p> : null}
+      {note ? <p className="font-body text-sm font-semibold text-plum">{note}</p> : null}
     </Link>
   );
 }

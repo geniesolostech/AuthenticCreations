@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import GrannyCornerMotif from '@/components/granny-corner-motif';
 import ProductCard from '@/components/product-card';
+import YarnUnderline from '@/components/yarn-underline';
 import { isSoldOut } from '@/lib/inventory-status';
 import { getProducts, type Product } from '@/lib/sanity/queries';
 import { fetchPricesAndStock } from '@/lib/shop/fetch-prices';
@@ -44,7 +46,14 @@ export default async function ShopSectionPage({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-      <h1 className="font-heading text-3xl text-charcoal sm:text-4xl">{SECTION_TITLES[section]}</h1>
+      {/* Woven spec §3/§4: page-title motif + rose underline. */}
+      <div className="inline-flex flex-col gap-1">
+        <div className="flex items-center gap-3">
+          <h1 className="font-heading text-3xl text-charcoal sm:text-4xl">{SECTION_TITLES[section]}</h1>
+          <GrannyCornerMotif size="sm" />
+        </div>
+        <YarnUnderline color="rose" />
+      </div>
 
       {products.length === 0 ? (
         <p className="mt-8 font-body text-charcoal">
@@ -52,14 +61,25 @@ export default async function ShopSectionPage({
         </p>
       ) : null}
 
+      {/* Deliberately NOT wrapped in RevealGrid: this grid is the page's
+          main content and a plausible Largest Contentful Paint element, so
+          it must never start at opacity:0 waiting on an
+          IntersectionObserver (carried finding from Task 4's review). Cards
+          still get the quilt frame rotation. */}
       <div className="mt-8 grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3">
-        {products.map((product) => {
+        {products.map((product, index) => {
           const id = primaryVariationId(product);
           const info = id ? variations.get(id) : undefined;
           const priceCents = info?.priceCents ?? null;
           const soldOut = info ? isSoldOut(info.trackInventory, counts[id]) : false;
           return (
-            <ProductCard key={product._id} product={product} priceCents={priceCents} soldOut={soldOut} />
+            <ProductCard
+              key={product._id}
+              product={product}
+              priceCents={priceCents}
+              soldOut={soldOut}
+              quiltIndex={index}
+            />
           );
         })}
         <Link

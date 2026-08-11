@@ -49,6 +49,14 @@ describe('EventCard', () => {
     expect(screen.getByText('3 spots left')).toBeInTheDocument();
   });
 
+  test('the spots-left note wears the plum accent, not rust (Woven spec §3)', () => {
+    render(<EventCard event={EVENT} spotsLeft={3} />);
+
+    const note = screen.getByText('3 spots left');
+    expect(note).toHaveClass('text-plum');
+    expect(note).not.toHaveClass('text-rust');
+  });
+
   test('announces a full circle in the brief’s words', () => {
     render(<EventCard event={EVENT} spotsLeft={0} />);
 

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import Home from '@/app/page';
@@ -51,6 +51,18 @@ const POST: PostSummary = {
   publishedAt: '2026-08-01T00:00:00.000Z',
 };
 
+/** Home section headings each sit in `<div className="flex ..."><h2/><motif/></div>`,
+ * itself the first child of `<div className="inline-flex flex-col ..."><row/><underline/></div>`
+ * (Woven spec §3/§4) — scopes the motif/underline lookup to one specific
+ * section's heading so tests don't accidentally grab a sibling section's. */
+function motifAndUnderlineFor(heading: HTMLElement) {
+  const row = heading.parentElement as HTMLElement;
+  const motif = within(row).getByTestId('granny-motif');
+  const colWrap = row.parentElement as HTMLElement;
+  const underline = within(colWrap).getByTestId('yarn-underline');
+  return { motif, underline, row, colWrap };
+}
+
 beforeEach(() => {
   mockedFeatured.mockReset().mockResolvedValue([]);
   mockedUpcoming.mockReset().mockResolvedValue([]);
@@ -83,6 +95,18 @@ describe('/ — hero', () => {
     // The transparent PNG, not the source JPEG: the JPEG's baked-in white
     // background sits on the linen hero as a visible rectangle.
     expect(logo).toHaveAttribute('src', '/logo.png');
+  });
+
+  test('sits on the sand-to-sand-deep gradient, not the flat linen fill (Woven spec §3)', async () => {
+    render(await Home());
+
+    const heroSection = screen
+      .getByRole('heading', { level: 1, name: 'Authentic Creations' })
+      .closest('section');
+    expect(heroSection).toHaveClass(
+      'bg-[linear-gradient(135deg,var(--color-sand),var(--color-sand-deep))]',
+    );
+    expect(heroSection).not.toHaveClass('bg-linen');
   });
 });
 
@@ -248,5 +272,124 @@ describe('/ — dev resilience', () => {
     expect(screen.queryByRole('heading', { name: /featured/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /next event/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /latest posts/i })).not.toBeInTheDocument();
+  });
+});
+
+describe('/ — crochet signatures (Woven spec §3/§4)', () => {
+  test('Featured heading pairs a left-side motif with a rose underline', async () => {
+    mockedFeatured.mockResolvedValue([product()]);
+
+    render(await Home());
+
+    const { motif, underline } = motifAndUnderlineFor(screen.getByRole('heading', { name: /featured/i }));
+    expect(motif).toHaveClass('order-first');
+    expect(underline.querySelector('path')).toHaveClass('stroke-rose');
+  });
+
+  test('Meet CJ heading pairs a right-side motif with a mustard underline', async () => {
+    render(await Home());
+
+    const { motif, underline } = motifAndUnderlineFor(screen.getByRole('heading', { name: 'Meet CJ' }));
+    expect(motif).toHaveClass('order-last');
+    expect(underline.querySelector('path')).toHaveClass('stroke-mustard');
+  });
+
+  test('Next event heading pairs a left-side motif with a sage underline', async () => {
+    mockedUpcoming.mockResolvedValue([EVENT]);
+
+    render(await Home());
+
+    const { motif, underline } = motifAndUnderlineFor(
+      screen.getByRole('heading', { name: /next event/i }),
+    );
+    expect(motif).toHaveClass('order-first');
+    expect(underline.querySelector('path')).toHaveClass('stroke-sage');
+  });
+
+  test('Latest posts heading pairs a right-side motif with a plum underline', async () => {
+    mockedPosts.mockResolvedValue([POST]);
+
+    render(await Home());
+
+    const { motif, underline } = motifAndUnderlineFor(
+      screen.getByRole('heading', { name: /latest posts/i }),
+    );
+    expect(motif).toHaveClass('order-last');
+    expect(underline.querySelector('path')).toHaveClass('stroke-plum');
+  });
+
+  test('renders exactly one motif per rendered section — four when every section has content', async () => {
+    mockedFeatured.mockResolvedValue([product()]);
+    mockedUpcoming.mockResolvedValue([EVENT]);
+    mockedPosts.mockResolvedValue([POST]);
+
+    render(await Home());
+
+    expect(screen.getAllByTestId('granny-motif')).toHaveLength(4);
+  });
+});
+
+describe('/ — bands (Woven spec §3)', () => {
+  test('Meet CJ section sits on the sage-band tint, not the flat linen fill', async () => {
+    render(await Home());
+
+    const section = screen.getByRole('heading', { name: 'Meet CJ' }).closest('section');
+    expect(section).toHaveClass('bg-sage-band');
+    expect(section).not.toHaveClass('bg-linen');
+  });
+
+  test('Next event section sits on the sand band', async () => {
+    mockedUpcoming.mockResolvedValue([EVENT]);
+
+    render(await Home());
+
+    const section = screen.getByRole('heading', { name: /next event/i }).closest('section');
+    expect(section).toHaveClass('bg-sand');
+  });
+});
+
+describe('/ — Featured grid: entrance stagger + quilt rotation (Woven spec §3/§5)', () => {
+  test('the grid wrapper carries the reveal-grid class', async () => {
+    mockedFeatured.mockResolvedValue([product()]);
+
+    render(await Home());
+
+    const section = screen.getByRole('heading', { name: /featured/i }).closest('section');
+    expect(section!.querySelector('.reveal-grid')).not.toBeNull();
+  });
+
+  test('the first three cards rotate mustard/rose/sage quilt frames by grid position', async () => {
+    mockedFeatured.mockResolvedValue([
+      product({ _id: 'p1', title: 'Hat One', slug: 'hat-one', squareVariationId: 'var-1' }),
+      product({ _id: 'p2', title: 'Hat Two', slug: 'hat-two', squareVariationId: 'var-2' }),
+      product({ _id: 'p3', title: 'Hat Three', slug: 'hat-three', squareVariationId: 'var-3' }),
+    ]);
+
+    render(await Home());
+
+    const cards = screen.getAllByRole('link', { name: /hat (one|two|three)/i });
+    expect(cards[0]).toHaveClass('border-mustard');
+    expect(cards[1]).toHaveClass('border-rose');
+    expect(cards[2]).toHaveClass('border-sage');
+  });
+});
+
+describe('/ — Latest posts: quilt rotation without entrance stagger (Woven spec §3)', () => {
+  test('cards rotate quilt frames by grid position, but the grid is not wrapped for stagger', async () => {
+    mockedPosts.mockResolvedValue([
+      POST,
+      { ...POST, _id: 'post2', title: 'Second Post', slug: 'second-post' },
+    ]);
+
+    render(await Home());
+
+    const section = screen.getByRole('heading', { name: /latest posts/i }).closest('section');
+    expect(section!.querySelector('.reveal-grid')).toBeNull();
+
+    const cards = screen.getAllByRole('link', {
+      name: /(a weekend with the fiber guild|second post)/i,
+    });
+    expect(cards[0]).toHaveClass('border-mustard');
+    expect(cards[1]).toHaveClass('border-rose');
   });
 });

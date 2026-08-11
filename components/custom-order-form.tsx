@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 
 import ColorSwatchPicker from '@/components/color-swatch-picker';
 import PlaceholderImage from '@/components/placeholder-image';
+import RevealGrid from '@/components/reveal-grid';
 import { useCart } from '@/lib/cart-context';
 import { CUSTOM_COMMENTS_MAX } from '@/lib/constants';
 import { formatMoney } from '@/lib/money';
@@ -83,50 +84,54 @@ export default function CustomOrderForm({ products }: CustomOrderFormProps) {
         <p id="custom-product-heading" className="font-body text-sm font-semibold text-charcoal">
           Choose a piece
         </p>
-        <div
-          role="group"
-          aria-labelledby="custom-product-heading"
-          className="grid grid-cols-2 gap-3 sm:grid-cols-3"
-        >
-          {products.map((product, index) => {
-            const isSelected = product.id === productId;
-            const cardPriceUnknown = product.priceCents === null;
-            // "custom pickers" get the same quilt card treatment as shop
-            // grids (Woven spec §3) — unselected cards rotate through the
-            // frame/fill tokens; the selected card keeps the rust voice
-            // interactive elements always use.
-            const { frame, fill } = quiltStyle(index);
-            return (
-              <button
-                key={product.id}
-                type="button"
-                aria-pressed={isSelected}
-                onClick={() => setProductId(product.id)}
-                className={`flex flex-col overflow-hidden rounded-xl border-2 text-left shadow-card transition hover:shadow-card-hover ${
-                  isSelected ? 'border-rust bg-cream ring-2 ring-rust/40' : `${frame} ${fill} hover:border-rust`
-                }`}
-              >
-                <div className="aspect-square w-full overflow-hidden bg-linen">
-                  {product.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- see components/product-card.tsx
-                    <img
-                      src={product.imageUrl}
-                      alt={product.title}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <PlaceholderImage title={product.title} />
-                  )}
-                </div>
-                <div className="flex flex-col gap-0.5 px-2 py-2">
-                  <span className="font-body text-sm font-semibold text-charcoal">{product.title}</span>
-                  <span className="font-body text-sm text-khaki">
-                    {cardPriceUnknown ? 'Price at checkout' : formatMoney(product.priceCents as number)}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
+        {/* role/aria-labelledby stay on this outer wrapper — RevealGrid only
+            owns the reveal-grid class + grid layout, not the a11y group
+            semantics (Woven spec §5: custom picker card grid is one of the
+            four grids wrapped for the entrance stagger). */}
+        <div role="group" aria-labelledby="custom-product-heading">
+          <RevealGrid className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {products.map((product, index) => {
+              const isSelected = product.id === productId;
+              const cardPriceUnknown = product.priceCents === null;
+              // "custom pickers" get the same quilt card treatment as shop
+              // grids (Woven spec §3) — unselected cards rotate through the
+              // frame/fill tokens; the selected card keeps the rust voice
+              // interactive elements always use.
+              const { frame, fill } = quiltStyle(index);
+              return (
+                <button
+                  key={product.id}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => setProductId(product.id)}
+                  className={`flex flex-col overflow-hidden rounded-xl border-2 text-left shadow-card transition hover:shadow-card-hover ${
+                    isSelected
+                      ? 'border-rust bg-cream ring-2 ring-rust/40'
+                      : `${frame} ${fill} hover:border-rust`
+                  }`}
+                >
+                  <div className="aspect-square w-full overflow-hidden bg-linen">
+                    {product.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- see components/product-card.tsx
+                      <img
+                        src={product.imageUrl}
+                        alt={product.title}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <PlaceholderImage title={product.title} />
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-0.5 px-2 py-2">
+                    <span className="font-body text-sm font-semibold text-charcoal">{product.title}</span>
+                    <span className="font-body text-sm text-khaki">
+                      {cardPriceUnknown ? 'Price at checkout' : formatMoney(product.priceCents as number)}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </RevealGrid>
         </div>
         <p data-testid="custom-price" className="font-heading text-xl text-charcoal">
           {priceUnknown ? 'Price at checkout' : formatMoney(selected.priceCents as number)}
