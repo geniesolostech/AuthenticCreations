@@ -25,3 +25,4 @@ Accepted at merge time after the final review (2026-08-10). None block launch; e
 - RSVP route logs raw error objects; trim to message/status to keep submitter PII out of CloudWatch.
 - Hero logo `alt` duplicates adjacent visible text (announce-once cleanup) and lacks explicit dimensions.
 - PowerShell-friendly variants for two bash-style env-prefix commands in the runbook.
+- **Khaki body text on quilt tints computes ~2.48-2.67:1** (e.g. khaki `#a98f68` on plum-tint `#ebe4f1` 2.48:1, on mustard-tint `#f7eed8` 2.67:1) — well under the 4.5:1 body-text floor. PRE-EXISTING pattern, not introduced by the Woven branch: khaki-on-linen was already 2.49:1 before it. Recorded in `app/globals.css`'s contrast-evidence comment; not fixed here since it predates this work.

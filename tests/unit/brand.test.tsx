@@ -63,6 +63,36 @@ test('globals.css @theme defines the Woven structure + accent token set', () => 
   }
 });
 
+test('globals.css reveal-grid stagger only delays entrance properties, not hover/selection feedback', () => {
+  // transition-property order is [opacity, transform, box-shadow,
+  // border-color, background-color]; transition-delay must be a matching
+  // 5-value list so only opacity/transform (entrance) carry the stagger and
+  // box-shadow/border-color/background-color (hover, selection) stay at 0s —
+  // otherwise a wrapped card's hover shadow / the custom picker's selection
+  // border+fill freeze for up to 660ms after reveal (final-review Finding 1).
+  const delays = [
+    ['1', '0s, 0s, 0s, 0s, 0s'],
+    ['2', '60ms, 60ms, 0s, 0s, 0s'],
+    ['3', '120ms, 120ms, 0s, 0s, 0s'],
+    ['4', '180ms, 180ms, 0s, 0s, 0s'],
+    ['5', '240ms, 240ms, 0s, 0s, 0s'],
+    ['6', '300ms, 300ms, 0s, 0s, 0s'],
+    ['7', '360ms, 360ms, 0s, 0s, 0s'],
+    ['8', '420ms, 420ms, 0s, 0s, 0s'],
+    ['9', '480ms, 480ms, 0s, 0s, 0s'],
+    ['10', '540ms, 540ms, 0s, 0s, 0s'],
+    ['11', '600ms, 600ms, 0s, 0s, 0s'],
+    ['12', '660ms, 660ms, 0s, 0s, 0s'],
+    ['n+13', '660ms, 660ms, 0s, 0s, 0s'],
+  ] as const;
+
+  for (const [nth, value] of delays) {
+    expect(globalsCss).toContain(
+      `.reveal-grid[data-revealed='true'] > *:nth-child(${nth}) { transition-delay: ${value}; }`,
+    );
+  }
+});
+
 test('globals.css does not alter the pre-existing brand tokens', () => {
   const existingTokens = [
     '--color-cream: #f7f1e5;',

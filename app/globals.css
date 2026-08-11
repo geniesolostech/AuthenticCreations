@@ -65,9 +65,22 @@
      clay-tint   #f3e6db  -> 9.66:1  PASS
 
    white #ffffff on:
-     terracotta  #a94e1f  -> 5.53:1  PASS
-     olive-deep  #5c6b3c  -> 5.80:1  PASS
-     plum        #6d5382  -> 6.54:1  PASS
+     terracotta  #a94e1f  -> 5.53:1  PASS  (reserved — no current usage)
+     plum        #6d5382  -> 6.54:1  PASS  (reserved — no current usage)
+
+   cream #f7f1e5 on:
+     olive-deep  #5c6b3c  -> 5.15:1  PASS  (sold-out badge renders
+                                            text-cream, not text-white —
+                                            corrected from an earlier
+                                            white-on-olive-deep row that
+                                            didn't match the markup)
+
+   terracotta #a94e1f on (hero tagline, spec §2 large-text 3:1 rule; the
+   135deg sand->sand-deep gradient band, worst point is the sand-deep end):
+     sand        #efe0c3  -> 4.25:1  PASS
+     sand-deep   #e9cfa3  -> 3.67:1  PASS  (worst case)
+   (text-rust on the same band was 2.64-3.06:1 across the ramp, below the
+   3:1 large-text floor — see components/hero.tsx.)
 
    plum #6d5382 on (EventCard "N spots left" text rotates across all 6
    quilt tints; every pairing computed, worst case is plum-tint at 5.26:1):
@@ -77,6 +90,13 @@
      sage-tint    #eaf0e2 -> 5.63:1  PASS
      golden-tint  #f8eecc -> 5.64:1  PASS
      mustard-tint #f7eed8 -> 5.66:1  PASS
+
+   ACKNOWLEDGED (not a Woven regression): khaki #a98f68 body/border text on
+   the quilt tints above computes ~2.48-2.67:1 (e.g. khaki on plum-tint
+   2.48:1, khaki on mustard-tint 2.67:1) — well under 4.5:1. This is a
+   PRE-EXISTING pattern, not introduced by this branch: khaki-on-linen was
+   already 2.49:1 before Woven. Tracked as deferred polish in
+   docs/known-issues.md rather than fixed in this table-correction pass.
 */
 
 /* Font tokens are aliased (not redeclared) from the CSS variables next/font
@@ -131,20 +151,36 @@
 }
 
 /* ~60ms ripple across the first 12 children; anything past that shares the
-   12th item's 660ms delay rather than growing unbounded. */
-.reveal-grid[data-revealed='true'] > *:nth-child(1) { transition-delay: 0ms; }
-.reveal-grid[data-revealed='true'] > *:nth-child(2) { transition-delay: 60ms; }
-.reveal-grid[data-revealed='true'] > *:nth-child(3) { transition-delay: 120ms; }
-.reveal-grid[data-revealed='true'] > *:nth-child(4) { transition-delay: 180ms; }
-.reveal-grid[data-revealed='true'] > *:nth-child(5) { transition-delay: 240ms; }
-.reveal-grid[data-revealed='true'] > *:nth-child(6) { transition-delay: 300ms; }
-.reveal-grid[data-revealed='true'] > *:nth-child(7) { transition-delay: 360ms; }
-.reveal-grid[data-revealed='true'] > *:nth-child(8) { transition-delay: 420ms; }
-.reveal-grid[data-revealed='true'] > *:nth-child(9) { transition-delay: 480ms; }
-.reveal-grid[data-revealed='true'] > *:nth-child(10) { transition-delay: 540ms; }
-.reveal-grid[data-revealed='true'] > *:nth-child(11) { transition-delay: 600ms; }
-.reveal-grid[data-revealed='true'] > *:nth-child(12) { transition-delay: 660ms; }
-.reveal-grid[data-revealed='true'] > *:nth-child(n+13) { transition-delay: 660ms; }
+   12th item's 660ms delay rather than growing unbounded.
+
+   `transition-delay` accepts a comma-separated list that pairs positionally
+   with `transition-property` (declared above as `opacity, transform,
+   box-shadow, border-color, background-color`). A single bare delay value
+   applies to EVERY property in that list — which was the bug here: it put
+   the entrance stagger on box-shadow/border-color/background-color too, so
+   a card's hover shadow (and the custom picker's selection border/fill)
+   froze for up to 660ms after data-revealed flipped, before easing in.
+   Each rule below instead lists five delays in the SAME ORDER as
+   transition-property — [opacity, transform, box-shadow, border-color,
+   background-color] — staggering only the two entrance properties and
+   pinning the three interaction properties at 0s so hover/selection
+   feedback is never delayed. KEEP THESE TWO LISTS IN SYNC: if
+   transition-property above ever gains, loses, or reorders a property,
+   every nth-child rule below must be updated to match position-for-position
+   or the delays will silently apply to the wrong property again. */
+.reveal-grid[data-revealed='true'] > *:nth-child(1) { transition-delay: 0s, 0s, 0s, 0s, 0s; }
+.reveal-grid[data-revealed='true'] > *:nth-child(2) { transition-delay: 60ms, 60ms, 0s, 0s, 0s; }
+.reveal-grid[data-revealed='true'] > *:nth-child(3) { transition-delay: 120ms, 120ms, 0s, 0s, 0s; }
+.reveal-grid[data-revealed='true'] > *:nth-child(4) { transition-delay: 180ms, 180ms, 0s, 0s, 0s; }
+.reveal-grid[data-revealed='true'] > *:nth-child(5) { transition-delay: 240ms, 240ms, 0s, 0s, 0s; }
+.reveal-grid[data-revealed='true'] > *:nth-child(6) { transition-delay: 300ms, 300ms, 0s, 0s, 0s; }
+.reveal-grid[data-revealed='true'] > *:nth-child(7) { transition-delay: 360ms, 360ms, 0s, 0s, 0s; }
+.reveal-grid[data-revealed='true'] > *:nth-child(8) { transition-delay: 420ms, 420ms, 0s, 0s, 0s; }
+.reveal-grid[data-revealed='true'] > *:nth-child(9) { transition-delay: 480ms, 480ms, 0s, 0s, 0s; }
+.reveal-grid[data-revealed='true'] > *:nth-child(10) { transition-delay: 540ms, 540ms, 0s, 0s, 0s; }
+.reveal-grid[data-revealed='true'] > *:nth-child(11) { transition-delay: 600ms, 600ms, 0s, 0s, 0s; }
+.reveal-grid[data-revealed='true'] > *:nth-child(12) { transition-delay: 660ms, 660ms, 0s, 0s, 0s; }
+.reveal-grid[data-revealed='true'] > *:nth-child(n+13) { transition-delay: 660ms, 660ms, 0s, 0s, 0s; }
 
 /* Fully inert under reduced motion: final state, no transition, and
    !important so it wins regardless of data-revealed (SSR/E2E safety —

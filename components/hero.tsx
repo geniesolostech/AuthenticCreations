@@ -26,7 +26,15 @@ export default function Hero() {
           className="w-full max-w-xs sm:max-w-sm"
         />
         <h1 className="font-heading text-3xl text-charcoal sm:text-4xl">Authentic Creations</h1>
-        <p className="font-script text-3xl text-rust sm:text-4xl">Find you in whatever you do.</p>
+        {/* text-terracotta, not text-rust: rust-on-sand-gradient computes
+            2.64-3.06:1 across the band (fails the spec §2 large-text 3:1
+            floor at the sand-deep end); terracotta clears it at 3.67-4.25:1
+            (see the contrast table in app/globals.css). Rust stays the
+            site's only interactive/action color per spec §2 — this tagline
+            is decorative text, not a control. */}
+        <p className="font-script text-3xl text-terracotta sm:text-4xl">
+          Find you in whatever you do.
+        </p>
         <div className="mt-2 flex flex-wrap items-center justify-center gap-4">
           <Link
             href="/shop/hats"

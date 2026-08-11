@@ -51,8 +51,8 @@ Tinted card fills: 8–12% mixes of the accent over cream (e.g. rose-tint `#F5E6
 
 ## 4. Crochet signature components
 
-- **`<GrannyCornerMotif/>`** — inline SVG 3×3 rounded-square cluster using 9 palette tokens; `aria-hidden="true"`; sizes sm (~36px, used beside headings and page titles) / md (~56px, footer only). Placement: beside major section headings on home (Featured, Meet CJ, Next event, Latest posts — alternating sides), page titles of Shop/Community/Blog, and one in the footer. Nowhere else (restraint is the design).
-- **`<YarnUnderline color/>`** — inline SVG wavy strand (the approved sample geometry), width fits heading, stroke 2.5, `aria-hidden`; color rotates per section through the accent tier in fixed order `[rose, mustard, sage, plum]` by section index. Applied under every section heading that gets a motif, plus page titles.
+- **`<GrannyCornerMotif/>`** — inline SVG 3×3 rounded-square cluster using 9 palette tokens; `aria-hidden="true"`; sizes sm (~36px, used beside headings and page titles) / md (~56px, footer only). Placement: beside major section headings on home (Featured, Meet CJ, Next event, Latest posts — alternating sides), page titles of Shop/Community/Blog/Custom, and one in the footer. Nowhere else (restraint is the design).
+- **`<YarnUnderline color/>`** — inline SVG wavy strand (the approved sample geometry), width fits the heading row (heading + motif), stroke 2.5, `aria-hidden`; color rotates per section through the accent tier in fixed order `[rose, mustard, sage, plum]` by section index. Applied under every section heading that gets a motif, plus page titles. About/Policies page-title underlines use `golden` — outside the 4-color home rotation, deliberate (calm-by-design pages per §3 get a distinct, quieter accent rather than continuing the index-based cycle).
 
 Both are pure presentational components with unit tests for rendering + aria-hidden.
 

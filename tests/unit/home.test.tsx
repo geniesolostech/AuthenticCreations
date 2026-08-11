@@ -108,6 +108,14 @@ describe('/ — hero', () => {
     );
     expect(heroSection).not.toHaveClass('bg-linen');
   });
+
+  test('tagline uses text-terracotta, not text-rust (fails AA large-text 3:1 on the sand gradient)', async () => {
+    render(await Home());
+
+    const tagline = screen.getByText(/find you in whatever you do/i);
+    expect(tagline).toHaveClass('text-terracotta');
+    expect(tagline).not.toHaveClass('text-rust');
+  });
 });
 
 describe('/ — featured pieces', () => {
