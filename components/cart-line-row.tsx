@@ -5,7 +5,17 @@ import { maxQuantityFor } from '@/lib/cart';
 import { useCart } from '@/lib/cart-context';
 import { MAX_LINE_QUANTITY, MIN_LINE_QUANTITY } from '@/lib/constants';
 import { formatMoney } from '@/lib/money';
-import type { CartLine } from '@/lib/types';
+import type { CartLine, CustomColor } from '@/lib/types';
+
+/**
+ * `Color: Red`, or `Colors: Red, Blue` for a piece combining more than one, in
+ * the order they were picked. Composed here rather than shared with the Square
+ * order note, whose wording is fixed by spec and must not follow a change made
+ * for the cart's benefit.
+ */
+function colorsText(colors: CustomColor[]): string {
+  return `${colors.length === 1 ? 'Color' : 'Colors'}: ${colors.join(', ')}`;
+}
 
 export interface CartLineRowProps {
   line: CartLine;
@@ -54,7 +64,7 @@ export default function CartLineRow({ line, soldOut = false }: CartLineRowProps)
 
         {line.custom && (
           <div className="flex flex-col gap-0.5">
-            <p className="font-body text-sm text-khaki">{`Color: ${line.custom.color}`}</p>
+            <p className="font-body text-sm text-khaki">{colorsText(line.custom.colors)}</p>
             {line.custom.comments !== '' && (
               <p className="line-clamp-2 font-body text-sm text-khaki">{line.custom.comments}</p>
             )}

@@ -189,7 +189,7 @@ describe('MiniCart contents', () => {
     renderCartUi([
       makeLine({
         name: 'Custom: Crochet Beanie',
-        custom: { color: 'Purple', comments: 'please add a big pom pom on top' },
+        custom: { colors: ['Purple'], comments: 'please add a big pom pom on top' },
       }),
     ]);
 
@@ -200,10 +200,25 @@ describe('MiniCart contents', () => {
     expect(scope.getByText(/big pom pom/i)).toBeInTheDocument();
   });
 
+  test('lists every color of a custom line, in the order they were picked', async () => {
+    const user = userEvent.setup();
+    renderCartUi([
+      makeLine({
+        name: 'Custom: Crochet Beanie',
+        custom: { colors: ['Purple', 'Green', 'Black'], comments: '' },
+      }),
+    ]);
+
+    await user.click(screen.getByRole('button', { name: /cart/i }));
+
+    // Plural label, and no re-sorting into swatch order.
+    expect(within(panel()).getByText('Colors: Purple, Green, Black')).toBeInTheDocument();
+  });
+
   test('clamps a long custom comment visually rather than cutting the text', async () => {
     const user = userEvent.setup();
     const comments = 'x'.repeat(400);
-    renderCartUi([makeLine({ custom: { color: 'Blue', comments } })]);
+    renderCartUi([makeLine({ custom: { colors: ['Blue'], comments } })]);
 
     await user.click(screen.getByRole('button', { name: /cart/i }));
 

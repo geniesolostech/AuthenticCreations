@@ -4,7 +4,12 @@ import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import CustomOrderForm, { type CustomProductOption } from '@/components/custom-order-form';
-import { CUSTOM_COLOR_SWATCHES, CUSTOM_COLORS, CUSTOM_COMMENTS_MAX } from '@/lib/constants';
+import {
+  CUSTOM_COLOR_SWATCHES,
+  CUSTOM_COLORS,
+  CUSTOM_COLORS_MAX,
+  CUSTOM_COMMENTS_MAX,
+} from '@/lib/constants';
 import { CartProvider, useCart } from '@/lib/cart-context';
 
 function CartLinesProbe() {
@@ -81,10 +86,27 @@ describe('CustomOrderForm', () => {
       name: 'Custom: Custom Beanie',
       unitAmount: 4500,
       quantity: 1,
-      custom: { color: 'Red', comments: 'Extra fringe please' },
+      custom: { colors: ['Red'], comments: 'Extra fringe please' },
     });
     // Validation message clears once the order actually goes through.
     expect(screen.queryByText('pick a color for your piece')).not.toBeInTheDocument();
+  });
+
+  test('adds the three chosen colors in pick order, at the same price as one', async () => {
+    const user = userEvent.setup();
+    renderWithCart(<CustomOrderForm products={products} />);
+
+    // Picked back to front through the swatch row, so a line that came back in
+    // CUSTOM_COLORS order would be the wrong one.
+    await user.click(screen.getByRole('button', { name: 'Purple' }));
+    await user.click(screen.getByRole('button', { name: 'Green' }));
+    await user.click(screen.getByRole('button', { name: 'Black' }));
+    await user.click(screen.getByRole('button', { name: /add to cart/i }));
+
+    expect(readLines()[0]).toMatchObject({
+      unitAmount: 4500,
+      custom: { colors: ['Purple', 'Green', 'Black'], comments: '' },
+    });
   });
 
   test('the comments counter shows characters typed over the 500 max', async () => {
@@ -188,7 +210,7 @@ describe('CustomOrderForm', () => {
       name: 'Custom: Custom Scarf',
       unitAmount: 6000,
       quantity: 1,
-      custom: { color: 'Green', comments: '' },
+      custom: { colors: ['Green'], comments: '' },
     });
   });
 
@@ -205,7 +227,7 @@ describe('CustomOrderForm', () => {
     window.removeEventListener('cart:open', openSpy);
   });
 
-  test('aria-pressed toggles as a different swatch is selected', async () => {
+  test('a second color joins the first rather than replacing it', async () => {
     const user = userEvent.setup();
     renderWithCart(<CustomOrderForm products={products} />);
 
@@ -219,8 +241,106 @@ describe('CustomOrderForm', () => {
     expect(purple).toHaveAttribute('aria-pressed', 'false');
 
     await user.click(purple);
-    expect(green).toHaveAttribute('aria-pressed', 'false');
+    expect(green).toHaveAttribute('aria-pressed', 'true');
     expect(purple).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('clicking a chosen swatch again drops that color', async () => {
+    const user = userEvent.setup();
+    renderWithCart(<CustomOrderForm products={products} />);
+
+    const green = screen.getByRole('button', { name: 'Green' });
+    await user.click(green);
+    await user.click(green);
+
+    expect(green).toHaveAttribute('aria-pressed', 'false');
+    await user.click(screen.getByRole('button', { name: /add to cart/i }));
+    expect(screen.getByRole('alert')).toHaveTextContent('pick a color for your piece');
+    expect(readLines()).toHaveLength(0);
+  });
+
+  test('dropping a color keeps the others, and the order they were picked in', async () => {
+    const user = userEvent.setup();
+    renderWithCart(<CustomOrderForm products={products} />);
+
+    await user.click(screen.getByRole('button', { name: 'Red' }));
+    await user.click(screen.getByRole('button', { name: 'Blue' }));
+    await user.click(screen.getByRole('button', { name: 'Green' }));
+    await user.click(screen.getByRole('button', { name: 'Blue' }));
+    await user.click(screen.getByRole('button', { name: /add to cart/i }));
+
+    expect(readLines()[0]).toMatchObject({ custom: { colors: ['Red', 'Green'], comments: '' } });
+  });
+
+  test('a re-picked color goes to the back of the list, not back to where it was', async () => {
+    const user = userEvent.setup();
+    renderWithCart(<CustomOrderForm products={products} />);
+
+    await user.click(screen.getByRole('button', { name: 'Red' }));
+    await user.click(screen.getByRole('button', { name: 'Blue' }));
+    await user.click(screen.getByRole('button', { name: 'Red' }));
+    await user.click(screen.getByRole('button', { name: 'Red' }));
+    await user.click(screen.getByRole('button', { name: /add to cart/i }));
+
+    expect(readLines()[0]).toMatchObject({ custom: { colors: ['Blue', 'Red'], comments: '' } });
+  });
+
+  test('the swatches left over go flat at three, and the chosen ones stay live', async () => {
+    const user = userEvent.setup();
+    renderWithCart(<CustomOrderForm products={products} />);
+
+    await user.click(screen.getByRole('button', { name: 'Red' }));
+    await user.click(screen.getByRole('button', { name: 'Blue' }));
+    expect(screen.getByRole('button', { name: 'Green' })).toBeEnabled();
+
+    await user.click(screen.getByRole('button', { name: 'Green' }));
+
+    // Every swatch that was not chosen, and only those.
+    for (const color of CUSTOM_COLORS) {
+      const swatch = screen.getByRole('button', { name: color });
+      if (['Red', 'Blue', 'Green'].includes(color)) {
+        expect(swatch).toBeEnabled();
+      } else {
+        expect(swatch).toBeDisabled();
+      }
+    }
+  });
+
+  test('a fourth color is ignored, and offered again as soon as one is dropped', async () => {
+    const user = userEvent.setup();
+    renderWithCart(<CustomOrderForm products={products} />);
+
+    await user.click(screen.getByRole('button', { name: 'Red' }));
+    await user.click(screen.getByRole('button', { name: 'Blue' }));
+    await user.click(screen.getByRole('button', { name: 'Green' }));
+    await user.click(screen.getByRole('button', { name: 'Purple' }));
+
+    expect(screen.getByRole('button', { name: 'Purple' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByText(`${CUSTOM_COLORS_MAX}/${CUSTOM_COLORS_MAX}`)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Blue' }));
+    await user.click(screen.getByRole('button', { name: 'Purple' }));
+    await user.click(screen.getByRole('button', { name: /add to cart/i }));
+
+    expect(readLines()[0]).toMatchObject({
+      custom: { colors: ['Red', 'Green', 'Purple'], comments: '' },
+    });
+  });
+
+  test('the counter shows how many of the three colors are spoken for', async () => {
+    const user = userEvent.setup();
+    renderWithCart(<CustomOrderForm products={products} />);
+
+    expect(screen.getByText(`0/${CUSTOM_COLORS_MAX}`)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Red' }));
+    expect(screen.getByText(`1/${CUSTOM_COLORS_MAX}`)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Blue' }));
+    expect(screen.getByText(`2/${CUSTOM_COLORS_MAX}`)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Red' }));
+    expect(screen.getByText(`1/${CUSTOM_COLORS_MAX}`)).toBeInTheDocument();
   });
 
   test('a color can be selected via the keyboard', async () => {
@@ -361,8 +481,40 @@ describe('CustomOrderForm — products sold in styles', () => {
       name: 'Custom: Crochet flowers — Tulip',
       unitAmount: 900,
       quantity: 1,
-      custom: { color: 'Green', comments: 'two of them please' },
+      custom: { colors: ['Green'], comments: 'two of them please' },
     });
+  });
+
+  test('a styled piece carries all three colors too, in pick order and at the style price', async () => {
+    const user = userEvent.setup();
+    renderWithCart(<CustomOrderForm products={styleProducts} />);
+
+    await user.click(screen.getByRole('button', { name: 'Rose' }));
+    await user.click(screen.getByRole('button', { name: 'Red' }));
+    await user.click(screen.getByRole('button', { name: 'White' }));
+    await user.click(screen.getByRole('button', { name: 'Yellow' }));
+    await user.click(screen.getByRole('button', { name: /add to cart/i }));
+
+    const lines = readLines();
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({
+      variationId: 'cust-flower-rose',
+      name: 'Custom: Crochet flowers — Rose',
+      // Three colors cost what one does; the style is what prices the order.
+      unitAmount: 800,
+      custom: { colors: ['Red', 'White', 'Yellow'], comments: '' },
+    });
+  });
+
+  test('a styled piece with no color chosen is refused the same way', async () => {
+    const user = userEvent.setup();
+    renderWithCart(<CustomOrderForm products={styleProducts} />);
+
+    await user.click(screen.getByRole('button', { name: 'Tulip' }));
+    await user.click(screen.getByRole('button', { name: /add to cart/i }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('pick a color for your piece');
+    expect(readLines()).toHaveLength(0);
   });
 
   test('the displayed price follows the chosen style, and the first one until then', async () => {

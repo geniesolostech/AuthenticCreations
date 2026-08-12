@@ -6,7 +6,7 @@ import ColorSwatchPicker from '@/components/color-swatch-picker';
 import PlaceholderImage from '@/components/placeholder-image';
 import RevealGrid from '@/components/reveal-grid';
 import { useCart } from '@/lib/cart-context';
-import { CUSTOM_COMMENTS_MAX } from '@/lib/constants';
+import { CUSTOM_COLORS_MAX, CUSTOM_COMMENTS_MAX } from '@/lib/constants';
 import { formatMoney } from '@/lib/money';
 import { quiltStyle } from '@/lib/quilt';
 import type { CustomColor } from '@/lib/types';
@@ -47,18 +47,19 @@ export interface CustomOrderFormProps {
 
 /**
  * The "make it yours" form: pick a product, pick a style if the product is sold
- * in styles, pick one of the 8 yarn colors, describe what you want, add to cart
- * at the fixed custom price. Custom items are made-to-order (untracked in
- * Square inventory), so there's no sold-out state here — unlike the regular
- * purchase panel, Add to Cart is only ever disabled when the price itself is
- * unknown (Square unreachable).
+ * in styles, pick one to `CUSTOM_COLORS_MAX` of the 8 yarn colors, describe what
+ * you want, add to cart at the fixed custom price. Colors are combined, not
+ * ranked — the price is the same however many are chosen. Custom items are
+ * made-to-order (untracked in Square inventory), so there's no sold-out state
+ * here — unlike the regular purchase panel, Add to Cart is only ever disabled
+ * when the price itself is unknown (Square unreachable).
  */
 export default function CustomOrderForm({ products }: CustomOrderFormProps) {
   const { add } = useCart();
 
   const [productId, setProductId] = useState(products[0]?.id ?? '');
   const [variantKey, setVariantKey] = useState<string | null>(null);
-  const [color, setColor] = useState<CustomColor | null>(null);
+  const [colors, setColors] = useState<CustomColor[]>([]);
   const [comments, setComments] = useState('');
   const [showVariantError, setShowVariantError] = useState(false);
   const [showColorError, setShowColorError] = useState(false);
@@ -88,8 +89,15 @@ export default function CustomOrderForm({ products }: CustomOrderFormProps) {
     setShowVariantError(false);
   }
 
-  function handleColorSelect(next: CustomColor) {
-    setColor(next);
+  // Adds a color, or drops one already chosen; a pick past the cap is ignored.
+  // The picker disables those swatches, so the guard here is unreachable
+  // through the UI — but this list is what reaches the cart and the order note,
+  // so the ceiling is enforced where the colors are actually held.
+  function handleColorToggle(next: CustomColor) {
+    setColors((prev) => {
+      if (prev.includes(next)) return prev.filter((color) => color !== next);
+      return prev.length >= CUSTOM_COLORS_MAX ? prev : [...prev, next];
+    });
     setShowColorError(false);
   }
 
@@ -107,7 +115,7 @@ export default function CustomOrderForm({ products }: CustomOrderFormProps) {
       setShowVariantError(true);
       return;
     }
-    if (color === null) {
+    if (colors.length === 0) {
       setShowColorError(true);
       return;
     }
@@ -120,7 +128,7 @@ export default function CustomOrderForm({ products }: CustomOrderFormProps) {
       unitAmount: priceCents as number,
       quantity: 1,
       imageUrl: selected.imageUrl,
-      custom: { color, comments },
+      custom: { colors, comments },
     });
     window.dispatchEvent(new CustomEvent('cart:open'));
     setShowColorError(false);
@@ -224,8 +232,13 @@ export default function CustomOrderForm({ products }: CustomOrderFormProps) {
       )}
 
       <div className="flex flex-col gap-2">
-        <span className="font-body text-sm font-semibold text-charcoal">Pick your yarn color</span>
-        <ColorSwatchPicker selected={color} onSelect={handleColorSelect} />
+        <span className="font-body text-sm font-semibold text-charcoal">Pick your yarn colors</span>
+        <ColorSwatchPicker selected={colors} onToggle={handleColorToggle} />
+        {/* Same counter idiom as the comments box below: the cap is worth
+            reading before the unchosen swatches go flat at three. */}
+        <p className="self-end font-body text-xs text-khaki">
+          {colors.length}/{CUSTOM_COLORS_MAX}
+        </p>
         {showColorError && (
           <p role="alert" className="font-body text-sm text-rust">
             pick a color for your piece

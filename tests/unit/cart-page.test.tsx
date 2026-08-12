@@ -87,7 +87,7 @@ describe('/cart', () => {
 
     renderWithCart(<CartPage />, [
       makeLine({ variationId: 'var-gone', name: 'Sold Out Beanie' }),
-      makeLine({ variationId: 'var-gone', name: 'Custom: Sold Out Beanie', custom: { color: 'Red', comments: '' } }),
+      makeLine({ variationId: 'var-gone', name: 'Custom: Sold Out Beanie', custom: { colors: ['Red'], comments: '' } }),
       makeLine({ variationId: 'var-ok', name: 'Flower Clip' }),
     ]);
 

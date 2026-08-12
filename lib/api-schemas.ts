@@ -13,6 +13,7 @@ import { z } from 'zod';
 
 import {
   CUSTOM_COLORS,
+  CUSTOM_COLORS_MAX,
   CUSTOM_COMMENTS_MAX,
   MAX_CART_LINES,
   MAX_LINE_QUANTITY,
@@ -22,6 +23,34 @@ import {
 
 /** Upper bound on ids per inventory request — one storefront page's worth. */
 export const MAX_INVENTORY_IDS = 50;
+
+/**
+ * What the shopper asked for on a custom line: the yarn colors, in pick order,
+ * and whatever they wrote in the comments box.
+ *
+ * Two shapes are accepted, and the second only for compatibility. Carts persist
+ * in the shopper's browser, so for a deploy window the wire still carries carts
+ * filled when a custom order took exactly one color (`color`) as well as ones
+ * filled since (`colors`). The legacy shape is older, not laxer: a color is
+ * checked against `CUSTOM_COLORS` in both, and the transform below collapses
+ * the two into the list the service composes the order note from — so nothing
+ * downstream can tell a legacy cart from a current one, or reach for a field
+ * that is not there.
+ */
+const customSchema = z
+  .union([
+    z.object({
+      colors: z.array(z.enum(CUSTOM_COLORS)).min(1).max(CUSTOM_COLORS_MAX),
+      comments: z.string().max(CUSTOM_COMMENTS_MAX),
+    }),
+    z.object({
+      color: z.enum(CUSTOM_COLORS),
+      comments: z.string().max(CUSTOM_COMMENTS_MAX),
+    }),
+  ])
+  .transform((custom) =>
+    'colors' in custom ? custom : { colors: [custom.color], comments: custom.comments },
+  );
 
 /**
  * A single cart line as it arrives over the wire. Structurally a `CartLine`
@@ -44,12 +73,7 @@ export const cartLineSchema = z.object({
   unitAmount: z.number().int().nonnegative(),
   quantity: z.number().int().min(MIN_LINE_QUANTITY).max(MAX_LINE_QUANTITY),
   imageUrl: z.string().optional(),
-  custom: z
-    .object({
-      color: z.enum(CUSTOM_COLORS),
-      comments: z.string().max(CUSTOM_COMMENTS_MAX),
-    })
-    .optional(),
+  custom: customSchema.optional(),
   piece: z
     .object({
       // 1-based, because that is how the pieces are numbered everywhere a

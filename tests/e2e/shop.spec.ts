@@ -164,16 +164,58 @@ test.describe('shop', () => {
     const checkoutRequest = captureCheckoutRequest(page);
     await panel.getByRole('button', { name: 'Checkout' }).click();
     const body = (await checkoutRequest).postDataJSON() as {
-      lines: { variationId: string; custom?: { color: string; comments: string } }[];
+      lines: { variationId: string; custom?: { colors: string[]; comments: string } }[];
     };
     expect(body.lines[0].variationId).toBe(RUFFLED_HAT.customVariationId);
-    expect(body.lines[0].custom).toEqual({ color: 'Blue', comments });
+    expect(body.lines[0].custom).toEqual({ colors: ['Blue'], comments });
 
     await page.waitForURL(`${FAKE_CHECKOUT}*`);
     const handoff = new URL(page.url());
     expect(handoff.searchParams.get('items')).toBe(`${RUFFLED_HAT.customVariationId}:1`);
     expect(handoff.searchParams.get('notes')).toBe(
       `Custom order — Color: Blue. ${comments}`,
+    );
+  });
+
+  test('a custom order can combine three colours, in the order they were picked', async ({
+    page,
+  }) => {
+    await interceptSquare(page);
+    await gotoHydrated(page, '/shop/hats/custom');
+
+    await page.getByRole('button', { name: new RegExp(RUFFLED_HAT.name, 'i') }).click();
+    await expect(page.getByTestId('custom-price')).toHaveText(RUFFLED_HAT.customPrice);
+
+    // Picked back to front through the swatch row, so an order that came back
+    // sorted by the palette would read Black, Green, Purple instead.
+    const comments = 'stripes, widest at the brim';
+    await page.getByRole('button', { name: 'Purple' }).click();
+    await page.getByRole('button', { name: 'Green' }).click();
+    await page.getByRole('button', { name: 'Black' }).click();
+    // The cap holds all the way out here: a fourth colour cannot be picked.
+    await expect(page.getByRole('button', { name: 'Red' })).toBeDisabled();
+    await page.locator('#custom-comments').fill(comments);
+    await page.getByRole('button', { name: 'Add to Cart' }).click();
+
+    const panel = miniCart(page);
+    await expect(panel).toBeVisible();
+    await expect(panel.getByText('Colors: Purple, Green, Black')).toBeVisible();
+    // Three colours cost what one does — no pricing follows the colour count.
+    await expect(panel.getByTestId('cart-subtotal')).toHaveText(RUFFLED_HAT.customPrice);
+
+    const checkoutRequest = captureCheckoutRequest(page);
+    await panel.getByRole('button', { name: 'Checkout' }).click();
+    const body = (await checkoutRequest).postDataJSON() as {
+      lines: { custom?: { colors: string[]; comments: string } }[];
+    };
+    expect(body.lines[0].custom).toEqual({
+      colors: ['Purple', 'Green', 'Black'],
+      comments,
+    });
+
+    await page.waitForURL(`${FAKE_CHECKOUT}*`);
+    expect(new URL(page.url()).searchParams.get('notes')).toBe(
+      `Custom order — Colors: Purple, Green, Black. ${comments}`,
     );
   });
 

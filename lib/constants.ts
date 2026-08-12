@@ -14,6 +14,12 @@ export const CUSTOM_COLOR_SWATCHES: Record<(typeof CUSTOM_COLORS)[number], strin
   Blue: '#3E6B8C',
   Purple: '#6D5382',
 };
+/**
+ * Most yarn colors one custom piece may combine. One source of truth for the
+ * swatch picker's cap and the checkout schema, so the picker can never offer a
+ * fourth color the API would refuse.
+ */
+export const CUSTOM_COLORS_MAX = 3;
 export const CUSTOM_COMMENTS_MAX = 500;
 /**
  * Longest piece name a checkout line may carry.

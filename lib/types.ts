@@ -10,7 +10,15 @@ export interface CartLine {
   unitAmount: number; // cents at add-time (server re-checks at checkout)
   quantity: number; // 1..10 — always exactly 1 on a `piece` line
   imageUrl?: string;
-  custom?: { color: CustomColor; comments: string };
+  /**
+   * A custom order's chosen yarn colors — at least one, at most
+   * `CUSTOM_COLORS_MAX`, in the order they were picked.
+   *
+   * The colors carry no roles (no "main" or "trim"), so pick order is the only
+   * thing that tells them apart, and it is preserved from the picker all the
+   * way to the maker's order note.
+   */
+  custom?: { colors: CustomColor[]; comments: string };
   /**
    * Which one-of-a-kind piece of a `sellByPiece` product this line is, numbered
    * from 1 by the product's photo order.

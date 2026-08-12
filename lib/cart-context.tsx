@@ -2,9 +2,38 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { addLine, itemCount, removeLine, repriceLines, setQuantity, subtotal } from '@/lib/cart';
-import type { CartLine } from '@/lib/types';
+import type { CartLine, CustomColor } from '@/lib/types';
 
 const STORAGE_KEY = 'ac-cart-v1';
+
+/**
+ * A cart line as it comes back out of storage, which may predate the running
+ * build: carts live in the shopper's browser across deploys.
+ *
+ * The one field that has moved is `custom.color`, a single color, which is now
+ * `custom.colors`, a list of one to three. Both are read here so a cart filled
+ * before that deploy still shows its color and still checks out.
+ */
+type StoredCartLine = Omit<CartLine, 'custom'> & {
+  custom?: { color?: CustomColor; colors?: CustomColor[]; comments: string };
+};
+
+/**
+ * Stored lines in the shape the rest of the app works in: a legacy single
+ * color becomes a one-color list, and the old field is dropped rather than
+ * carried alongside the new one, so nothing past this border has two places to
+ * look for a color.
+ */
+function migrateStoredLines(lines: StoredCartLine[]): CartLine[] {
+  return lines.map(({ custom, ...line }) => {
+    if (custom === undefined) return line;
+    // The empty fallback is unreachable from any cart this app has written —
+    // but storage is the shopper's to edit, and a missing list would read as
+    // `undefined.length` in the cart row.
+    const colors = custom.colors ?? (custom.color === undefined ? [] : [custom.color]);
+    return { ...line, custom: { colors, comments: custom.comments } };
+  });
+}
 
 interface CartContextValue {
   lines: CartLine[];
@@ -38,7 +67,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       const parsed: unknown = raw ? JSON.parse(raw) : [];
-      setLines(Array.isArray(parsed) ? (parsed as CartLine[]) : []);
+      setLines(Array.isArray(parsed) ? migrateStoredLines(parsed as StoredCartLine[]) : []);
     } catch {
       setLines([]);
     }

@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { addLine, itemCount, removeLine, repriceLines, setQuantity, subtotal } from '@/lib/cart';
 import { CartProvider, useCart } from '@/lib/cart-context';
+import { readCartLines, readStoredLines, renderWithCart } from '@/tests/helpers/cart-render';
 import type { CartLine } from '@/lib/types';
 
 const STORAGE_KEY = 'ac-cart-v1';
@@ -45,7 +46,7 @@ describe('addLine', () => {
 
   test('keeps two custom lines separate even with identical variation and color', () => {
     let lines: CartLine[] = [];
-    const customLine = makeLine({ custom: { color: 'Black', comments: 'extra long ties' } });
+    const customLine = makeLine({ custom: { colors: ['Black'], comments: 'extra long ties' } });
     lines = addLine(lines, customLine);
     lines = addLine(lines, customLine);
     expect(lines).toHaveLength(2);
@@ -146,14 +147,14 @@ describe('itemCount', () => {
 describe('repriceLines', () => {
   test('writes the fresh price onto every line carrying that variation', () => {
     let lines = addLine([], makeLine({ variationId: 'var-1', unitAmount: 4500, quantity: 2 }));
-    lines = addLine(lines, makeLine({ variationId: 'var-1', unitAmount: 4500, custom: { color: 'Red', comments: '' } }));
+    lines = addLine(lines, makeLine({ variationId: 'var-1', unitAmount: 4500, custom: { colors: ['Red'], comments: '' } }));
 
     const repriced = repriceLines(lines, { 'var-1': 5000 });
 
     expect(repriced.map((l) => l.unitAmount)).toEqual([5000, 5000]);
     // Everything else about a line survives — quantity, custom note, line id.
     expect(repriced[0].quantity).toBe(2);
-    expect(repriced[1].custom).toEqual({ color: 'Red', comments: '' });
+    expect(repriced[1].custom).toEqual({ colors: ['Red'], comments: '' });
     expect(repriced.map((l) => l.lineId)).toEqual(lines.map((l) => l.lineId));
   });
 
@@ -228,5 +229,64 @@ describe('CartProvider / useCart persistence', () => {
     expect(screen.getByTestId('count')).toHaveTextContent('1');
 
     setItemSpy.mockRestore();
+  });
+});
+
+/**
+ * A cart outlives a deploy: it sits in the shopper's browser until they check
+ * out. These are the lines an older build left behind, which the provider has
+ * to bring up to the current shape on the way in — mid-session, with no reload.
+ */
+describe('CartProvider — carts saved before custom orders took more than one color', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  /** A stored custom line carrying whatever `custom` block the test is about. */
+  function storedCustomLine(custom: unknown): unknown {
+    return {
+      lineId: 'line-stored',
+      variationId: 'var-1',
+      name: 'Custom: Crochet Beanie',
+      unitAmount: 4500,
+      quantity: 1,
+      custom,
+    };
+  }
+
+  test('hydrates a legacy single color as a one-color list', () => {
+    renderWithCart(null, [
+      storedCustomLine({ color: 'Red', comments: 'extra long ties' }),
+    ] as CartLine[]);
+
+    expect(readCartLines()[0].custom).toEqual({ colors: ['Red'], comments: 'extra long ties' });
+  });
+
+  test('drops the legacy field rather than carrying both shapes forward', () => {
+    renderWithCart(null, [storedCustomLine({ color: 'Red', comments: '' })] as CartLine[]);
+
+    expect(readCartLines()[0].custom).not.toHaveProperty('color');
+  });
+
+  test('writes the converted cart back, so the conversion happens once', async () => {
+    renderWithCart(null, [storedCustomLine({ color: 'Red', comments: '' })] as CartLine[]);
+
+    await waitFor(() =>
+      expect(readStoredLines()[0].custom).toEqual({ colors: ['Red'], comments: '' }),
+    );
+  });
+
+  test('leaves a line already carrying a list alone, pick order and all', () => {
+    renderWithCart(null, [
+      storedCustomLine({ colors: ['Purple', 'Green'], comments: 'stripes' }),
+    ] as CartLine[]);
+
+    expect(readCartLines()[0].custom).toEqual({ colors: ['Purple', 'Green'], comments: 'stripes' });
+  });
+
+  test('leaves an ordinary line without a custom block alone', () => {
+    renderWithCart(null, [{ ...makeLine(), lineId: 'line-plain' }]);
+
+    expect(readCartLines()[0]).not.toHaveProperty('custom');
   });
 });

@@ -42,7 +42,7 @@ function customLine(overrides: Record<string, unknown> = {}): Record<string, unk
     variationId: 'var-custom',
     name: 'Custom: Crochet Beanie',
     unitAmount: 6000,
-    custom: { color: 'Blue', comments: 'Extra slouchy please.' },
+    custom: { colors: ['Blue'], comments: 'Extra slouchy please.' },
     ...overrides,
   });
 }
@@ -95,7 +95,7 @@ describe('POST /api/checkout — happy path', () => {
     const comments = 'x'.repeat(500);
 
     const response = await POST(
-      post({ lines: [customLine({ quantity: 10, custom: { color: 'Blue', comments } })] }),
+      post({ lines: [customLine({ quantity: 10, custom: { colors: ['Blue'], comments } })] }),
     );
 
     expect(response.status).toBe(200);
@@ -153,7 +153,7 @@ describe('POST /api/checkout — happy path', () => {
         lines: [
           customLine({
             note: 'free hat please',
-            custom: { color: 'Blue', comments: 'Extra slouchy please.', priceCents: 1 },
+            custom: { colors: ['Blue'], comments: 'Extra slouchy please.', priceCents: 1 },
           }),
         ],
         redirectUrl: 'https://evil.test',
@@ -172,6 +172,47 @@ describe('POST /api/checkout — happy path', () => {
       redirectUrl: `${SITE_URL}/thanks`,
     });
   });
+
+  it('carries three colors through in the order they were picked', async () => {
+    const response = await POST(
+      post({
+        lines: [customLine({ custom: { colors: ['Red', 'Blue', 'Green'], comments: 'stripes' } })],
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(gw.calls.createPaymentLink[0]?.lineItems[0]?.note).toBe(
+      'Custom order — Colors: Red, Blue, Green. stripes',
+    );
+  });
+
+  it('accepts a cart saved before custom orders took more than one color', async () => {
+    // The legacy `color` shape still sits in shoppers' localStorage; the note it
+    // produces is the one-color note, indistinguishable from a current cart's.
+    const response = await POST(
+      post({ lines: [customLine({ custom: { color: 'Blue', comments: 'Extra slouchy please.' } })] }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(gw.calls.createPaymentLink[0]?.lineItems[0]?.note).toBe(
+      'Custom order — Color: Blue. Extra slouchy please.',
+    );
+  });
+
+  it('drops the legacy color when a line somehow carries both shapes', async () => {
+    // Nothing writes both, but the current shape is the one that wins — the
+    // legacy field never gets to overrule the list the shopper actually picked.
+    const response = await POST(
+      post({
+        lines: [customLine({ custom: { color: 'Red', colors: ['Blue', 'Green'], comments: 'hi' } })],
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(gw.calls.createPaymentLink[0]?.lineItems[0]?.note).toBe(
+      'Custom order — Colors: Blue, Green. hi',
+    );
+  });
 });
 
 describe('POST /api/checkout — 400 invalid body', () => {
@@ -188,10 +229,31 @@ describe('POST /api/checkout — 400 invalid body', () => {
     ['quantity 0', { lines: [line({ quantity: 0 })] }],
     ['a fractional quantity', { lines: [line({ quantity: 1.5 })] }],
     ['a string quantity', { lines: [line({ quantity: '2' })] }],
-    ['a 501-character comment', { lines: [customLine({ custom: { color: 'Blue', comments: 'x'.repeat(501) } })] }],
-    ['a colour outside CUSTOM_COLORS', { lines: [customLine({ custom: { color: 'Chartreuse', comments: 'hi' } })] }],
+    ['a 501-character comment', { lines: [customLine({ custom: { colors: ['Blue'], comments: 'x'.repeat(501) } })] }],
+    [
+      'a colour outside CUSTOM_COLORS',
+      { lines: [customLine({ custom: { colors: ['Chartreuse'], comments: 'hi' } })] },
+    ],
+    [
+      'one bad colour among good ones',
+      { lines: [customLine({ custom: { colors: ['Red', 'Chartreuse'], comments: 'hi' } })] },
+    ],
+    ['no colours at all', { lines: [customLine({ custom: { colors: [], comments: 'hi' } })] }],
+    [
+      'a fourth colour',
+      { lines: [customLine({ custom: { colors: ['Red', 'Blue', 'Green', 'Purple'], comments: 'hi' } })] },
+    ],
+    ['colours that are not an array', { lines: [customLine({ custom: { colors: 'Red', comments: 'hi' } })] }],
     ['a custom block with no colour', { lines: [customLine({ custom: { comments: 'hi' } })] }],
-    ['a custom block with no comments', { lines: [customLine({ custom: { color: 'Blue' } })] }],
+    ['a custom block with no comments', { lines: [customLine({ custom: { colors: ['Blue'] } })] }],
+    // The legacy single-colour shape is still accepted, so it has to be held to
+    // the same enum and comment limits as the list that replaced it.
+    ['a legacy colour outside CUSTOM_COLORS', { lines: [customLine({ custom: { color: 'Chartreuse', comments: 'hi' } })] }],
+    ['a legacy line with no comments', { lines: [customLine({ custom: { color: 'Blue' } })] }],
+    [
+      'a legacy line with a 501-character comment',
+      { lines: [customLine({ custom: { color: 'Blue', comments: 'x'.repeat(501) } })] },
+    ],
     ['a negative unitAmount', { lines: [line({ unitAmount: -1 })] }],
     ['a fractional unitAmount', { lines: [line({ unitAmount: 45.5 })] }],
     ['a string unitAmount', { lines: [line({ unitAmount: '4500' })] }],

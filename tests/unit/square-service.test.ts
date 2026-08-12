@@ -122,7 +122,7 @@ describe('createCheckout', () => {
         name: 'Custom: Crochet Beanie',
         unitAmount: 6000,
         quantity: 1,
-        custom: { color: 'Blue', comments: 'Please make it extra slouchy.' },
+        custom: { colors: ['Blue'], comments: 'Please make it extra slouchy.' },
       }),
     ];
 
@@ -149,7 +149,7 @@ describe('createCheckout', () => {
       line({
         variationId: 'var-custom',
         unitAmount: 6000,
-        custom: { color: 'Red', comments: 'For my sister.' },
+        custom: { colors: ['Red'], comments: 'For my sister.' },
       }),
     ];
 
@@ -160,6 +160,42 @@ describe('createCheckout', () => {
     // em dash (U+2014), not a hyphen
     expect(note).toContain('—');
     expect(note).not.toContain(' - ');
+  });
+
+  it('lists two colors in the order they were picked, under a plural label', async () => {
+    const gw = shopGateway();
+    const cart = [
+      line({
+        variationId: 'var-custom',
+        unitAmount: 6000,
+        custom: { colors: ['Red', 'Blue'], comments: 'For my sister.' },
+      }),
+    ];
+
+    await createCheckout(cart, gw);
+
+    expect(gw.calls.createPaymentLink[0].lineItems[0].note).toBe(
+      'Custom order — Colors: Red, Blue. For my sister.',
+    );
+  });
+
+  it('lists three colors in pick order, not in swatch order', async () => {
+    const gw = shopGateway();
+    // Purple is the last swatch and Black the first, so a note that re-sorted
+    // by CUSTOM_COLORS would come back in the opposite order.
+    const cart = [
+      line({
+        variationId: 'var-custom',
+        unitAmount: 6000,
+        custom: { colors: ['Purple', 'Green', 'Black'], comments: 'stripes please' },
+      }),
+    ];
+
+    await createCheckout(cart, gw);
+
+    expect(gw.calls.createPaymentLink[0].lineItems[0].note).toBe(
+      'Custom order — Colors: Purple, Green, Black. stripes please',
+    );
   });
 
   it('omits the note for non-custom lines', async () => {
@@ -208,7 +244,7 @@ describe('createCheckout', () => {
         line({
           variationId: 'var-custom',
           unitAmount: 6000,
-          custom: { color: 'Red', comments: 'For my sister.' },
+          custom: { colors: ['Red'], comments: 'For my sister.' },
           piece: { number: 2 },
         }),
       ],
@@ -230,7 +266,7 @@ describe('createCheckout', () => {
         line({
           variationId: 'var-custom',
           unitAmount: 6000,
-          custom: { color: 'Green', comments: 'x'.repeat(SQUARE_LINE_ITEM_NOTE_MAX) },
+          custom: { colors: ['Green'], comments: 'x'.repeat(SQUARE_LINE_ITEM_NOTE_MAX) },
           piece: { number: 2, label: 'Sunset' },
         }),
       ],
@@ -247,7 +283,7 @@ describe('createCheckout', () => {
       line({
         variationId: 'var-custom',
         unitAmount: 6000,
-        custom: { color: 'Green', comments: 'x'.repeat(SQUARE_LINE_ITEM_NOTE_MAX + 500) },
+        custom: { colors: ['Green'], comments: 'x'.repeat(SQUARE_LINE_ITEM_NOTE_MAX + 500) },
       }),
     ];
 
@@ -264,7 +300,7 @@ describe('createCheckout', () => {
     const prefix = 'Custom order — Color: Green. ';
     const comments = 'y'.repeat(SQUARE_LINE_ITEM_NOTE_MAX - prefix.length);
     const cart = [
-      line({ variationId: 'var-custom', unitAmount: 6000, custom: { color: 'Green', comments } }),
+      line({ variationId: 'var-custom', unitAmount: 6000, custom: { colors: ['Green'], comments } }),
     ];
 
     await createCheckout(cart, gw);
@@ -279,7 +315,7 @@ describe('createCheckout', () => {
     const prefix = 'Custom order — Color: Green. ';
     const comments = 'z'.repeat(SQUARE_LINE_ITEM_NOTE_MAX - prefix.length + 1);
     const cart = [
-      line({ variationId: 'var-custom', unitAmount: 6000, custom: { color: 'Green', comments } }),
+      line({ variationId: 'var-custom', unitAmount: 6000, custom: { colors: ['Green'], comments } }),
     ];
 
     await createCheckout(cart, gw);
@@ -296,7 +332,7 @@ describe('createCheckout', () => {
       line({
         variationId: 'var-custom',
         unitAmount: 6000,
-        custom: { color: 'Green', comments: '🧶'.repeat(SQUARE_LINE_ITEM_NOTE_MAX) },
+        custom: { colors: ['Green'], comments: '🧶'.repeat(SQUARE_LINE_ITEM_NOTE_MAX) },
       }),
     ];
 
@@ -371,7 +407,7 @@ describe('createCheckout', () => {
         variationId: 'var-custom',
         unitAmount: 6000,
         quantity: 10,
-        custom: { color: 'Purple', comments: 'ready-mades are gone, make me one' },
+        custom: { colors: ['Purple'], comments: 'ready-mades are gone, make me one' },
       }),
     ];
 

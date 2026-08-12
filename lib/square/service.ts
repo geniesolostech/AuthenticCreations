@@ -256,7 +256,7 @@ function toLineItem(line: CartLine): { variationId: string; quantity: number; no
  */
 function lineNote(line: CartLine): string | undefined {
   const parts: string[] = [];
-  if (line.custom !== undefined) parts.push(customNote(line.custom.color, line.custom.comments));
+  if (line.custom !== undefined) parts.push(customNote(line.custom.colors, line.custom.comments));
   if (line.piece !== undefined) parts.push(pieceNote(line.piece.number, line.piece.label));
   if (parts.length === 0) return undefined;
   return truncateToLimit(parts.join(' '), SQUARE_LINE_ITEM_NOTE_MAX);
@@ -265,9 +265,16 @@ function lineNote(line: CartLine): string | undefined {
 /**
  * The exact note the maker sees on the Square order for a custom piece.
  * Format is fixed by spec (em dash, U+2014).
+ *
+ * The colors are listed in the order the shopper picked them — they carry no
+ * roles, so that order is the only thing distinguishing them. A single color
+ * reads `Color:`, as it always has: the label is the only thing the plural
+ * changes, so a one-color order looks the same on Square as it did before
+ * custom orders took more than one.
  */
-function customNote(color: string, comments: string): string {
-  return `Custom order — Color: ${color}. ${comments}`;
+function customNote(colors: string[], comments: string): string {
+  const label = colors.length === 1 ? 'Color' : 'Colors';
+  return `Custom order — ${label}: ${colors.join(', ')}. ${comments}`;
 }
 
 /**
