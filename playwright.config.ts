@@ -88,7 +88,13 @@ export default defineConfig({
     },
   ],
 
-  webServer: {
+  // `npm run test:e2e` starts the server through scripts/run-e2e.mjs instead
+  // of this block, precisely because of the Windows wart documented below —
+  // the script kills the server's process tree itself the moment the tests
+  // finish, so the run actually exits. E2E_EXTERNAL_SERVER=1 is how it tells
+  // this config to stand down; running `npx playwright test` bare still works
+  // and still owns its server, slow teardown and all.
+  webServer: process.env.E2E_EXTERNAL_SERVER === '1' ? undefined : {
     // Next's own entry point, run directly rather than through `npx` or
     // `npm run`: each wrapper is one more process between Playwright and the
     // server, and Playwright tears the server down by killing the process tree
@@ -106,9 +112,7 @@ export default defineConfig({
     // settings, and by the bundler (`--webpack` stalls identically), so there is
     // nothing to tune here. A `taskkill /PID <server pid> /T /F` from another
     // shell unblocks it instantly and Playwright then reports and exits
-    // normally — so if this ever becomes intolerable, the escape hatch is to
-    // drop `webServer` and have the npm script own the server's lifecycle
-    // (`start-server-and-test` kills it the same way). See the runbook.
+    // normally — which is exactly what scripts/run-e2e.mjs automates.
     command: `node ./node_modules/next/dist/bin/next dev --port ${PORT}`,
     url: BASE_URL,
     // Never reuse: a server started without these env vars would serve real
