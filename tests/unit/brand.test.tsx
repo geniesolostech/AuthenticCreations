@@ -15,32 +15,20 @@ test('header shows brand name and main nav', () => {
   }
 });
 
-/**
- * The size pin from the nav's text-lg bump, carried onto the chip row that
- * replaced the bare links. Three of its assertions were re-aimed by that
- * change, deliberately: the reading size now lives on the chip rather than on
- * the <nav> (the pill carries its own weight through frame, tint and
- * padding); the row scrolls sideways instead of wrapping to a second line;
- * and hover moves the frame rather than the label, because rust text on a
- * quilt tint computes 3.21-3.45:1, under the 4.5:1 body-text floor (contrast
- * table in app/globals.css). What the test still guards is unchanged: none of
- * this may shrink the header back to fine print.
- */
-test('header nav reads at a comfortable size, in chips that never wrap', () => {
+test('header nav reads at a comfortable size, without becoming a redesign', () => {
   render(<SiteHeader />);
 
-  const wordmark = screen.getByText('Authentic Creations');
+  const wordmark = screen.getByRole('link', { name: /authentic creations/i });
   expect(wordmark).toHaveClass('text-2xl', 'sm:text-3xl');
   expect(wordmark).not.toHaveClass('text-xl');
 
   const nav = screen.getByRole('navigation', { name: 'Main' });
-  expect(nav).toHaveClass('overflow-x-auto');
-  expect(nav).not.toHaveClass('flex-wrap');
+  expect(nav).toHaveClass('text-lg', 'font-semibold');
+  expect(nav).not.toHaveClass('text-sm');
 
-  const hats = screen.getByRole('link', { name: 'Hats' });
-  expect(hats).toHaveClass('text-base', 'font-semibold');
-  expect(hats).not.toHaveClass('text-sm');
-  expect(hats).toHaveClass('hover:border-rust');
+  // The parts that must not move: links still wrap, and still go rust on hover.
+  expect(nav).toHaveClass('flex-wrap');
+  expect(screen.getByRole('link', { name: 'Hats' })).toHaveClass('hover:text-rust');
 });
 
 test('footer shows tagline and policies link', () => {

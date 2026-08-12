@@ -74,7 +74,6 @@
                                             corrected from an earlier
                                             white-on-olive-deep row that
                                             didn't match the markup)
-     rust        #c9622b  -> 3.55:1  see ACKNOWLEDGED (rust) below
 
    terracotta #a94e1f on (hero tagline, spec §2 large-text 3:1 rule; the
    135deg sand->sand-deep gradient band, worst point is the sand-deep end):
@@ -91,23 +90,6 @@
      sage-tint    #eaf0e2 -> 5.63:1  PASS
      golden-tint  #f8eecc -> 5.64:1  PASS
      mustard-tint #f7eed8 -> 5.66:1  PASS
-
-   Header band (components/site-header.tsx) introduces no pair that is not
-   already above: the masthead reuses the hero's 135deg sand->sand-deep
-   gradient, so its wordmark reads on the charcoal-on-sand rows (7.84:1 worst
-   case), and every chip label sits on an opaque quilt tint, i.e. the
-   charcoal-on-tint rows (9.52:1 worst case). The chip frames and the yarn
-   strand along the band's bottom edge are accent-tier decoration — not text,
-   and never the only cue for anything — so no ratio governs them.
-
-   ACKNOWLEDGED (rust; not introduced by the header): cream #f7f1e5 on rust
-   #c9622b computes 3.55:1 — clear of the 3:1 large-text floor, under the
-   4.5:1 body-text one. This is the site's single action voice and it predates
-   this table: every rust control already wears it (hero CTA, Add to Cart,
-   Checkout, the cart-count badge, the variant picker's checked pill). The
-   header's current-page chip renders in that same voice rather than inventing
-   a second one, so closing the gap means darkening the rust token for the
-   whole site at once — a brand decision, not a header one.
 
    ACKNOWLEDGED (not a Woven regression): khaki #a98f68 body/border text on
    the quilt tints above computes ~2.48-2.67:1 (e.g. khaki on plum-tint
