@@ -1,6 +1,7 @@
 'use client';
 
 import PlaceholderImage from '@/components/placeholder-image';
+import { maxQuantityFor } from '@/lib/cart';
 import { useCart } from '@/lib/cart-context';
 import { MAX_LINE_QUANTITY, MIN_LINE_QUANTITY } from '@/lib/constants';
 import { formatMoney } from '@/lib/money';
@@ -18,12 +19,15 @@ export interface CartLineRowProps {
  * container decides the width, the row only lays itself out.
  *
  * The stepper states its bounds instead of relying on the cart engine's silent
- * clamp: `−` is disabled at 1 and `+` at 10, where it also explains why.
+ * clamp: `−` is disabled at 1 and `+` at 10, where it also explains why. A
+ * one-of-a-kind piece is capped at 1 instead, so both ends are disabled at once
+ * and the note next to them says which limit is doing the talking.
  */
 export default function CartLineRow({ line, soldOut = false }: CartLineRowProps) {
   const { remove, setQty } = useCart();
+  const isPiece = line.piece !== undefined;
   const atMin = line.quantity <= MIN_LINE_QUANTITY;
-  const atMax = line.quantity >= MAX_LINE_QUANTITY;
+  const atMax = line.quantity >= maxQuantityFor(line);
 
   return (
     <li
@@ -88,7 +92,11 @@ export default function CartLineRow({ line, soldOut = false }: CartLineRowProps)
             </button>
           </div>
 
-          {atMax && <span className="font-body text-xs text-khaki">{`max ${MAX_LINE_QUANTITY} per order`}</span>}
+          {atMax && (
+            <span className="font-body text-xs text-khaki">
+              {isPiece ? 'one of a kind' : `max ${MAX_LINE_QUANTITY} per order`}
+            </span>
+          )}
 
           <button
             type="button"

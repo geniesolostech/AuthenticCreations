@@ -35,13 +35,17 @@ export default async function CustomOrderPage({
   const { section } = await params;
   if (!isSection(section)) notFound();
 
-  // Guarded the same way as the grid/detail pages: a Sanity hiccup degrades
-  // to the empty-state copy below rather than a crashed page.
-  let products: Product[] = [];
+  // Logged and rethrown, the same way as the grid/detail pages. Carrying on
+  // with no products would render "we don't have any hats yet" and, under
+  // `revalidate = 60`, cache that answer — a Sanity hiccup telling shoppers the
+  // shop is empty for a minute after it passed. A throw is a retryable 500 that
+  // is never cached; the genuine empty catalog still reaches that copy below.
+  let products: Product[];
   try {
     products = await getProducts(section);
   } catch (error) {
     console.error('[shop] failed to fetch products from Sanity', error);
+    throw error;
   }
 
   // Every product in the section gets a card, custom SKU or not (pre-launch

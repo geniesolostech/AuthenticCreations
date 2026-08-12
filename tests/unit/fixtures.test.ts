@@ -34,6 +34,7 @@ const { FIXTURE_VARIATIONS, sanityFixtures, sanityFixturesEnabled, fixtureRsvpDe
   '@/lib/sanity/fixtures'
 );
 const { squareFixturesEnabled } = await import('@/lib/square/fixtures');
+const { pieceName, piecesOf } = await import('@/lib/shop/pieces');
 const queries = await import('@/lib/sanity/queries');
 
 beforeEach(() => {
@@ -237,6 +238,31 @@ describe('SANITY_FAKE — flag on', () => {
     expect(withCustom.length).toBeLessThan(variants.length);
   });
 
+  it('sells exactly one product by piece, covering every state the picker renders', () => {
+    const all = [...sanityFixtures.products('hats'), ...sanityFixtures.products('accessories')];
+    const byPiece = all.filter((product) => product.sellByPiece === true);
+
+    expect(byPiece).toHaveLength(1);
+    const pieces = piecesOf(byPiece[0]);
+    expect(pieces.map(pieceName)).toEqual(['Sunset', 'Piece 2', 'Driftwood']);
+    expect(pieces.filter((piece) => piece.sold)).toHaveLength(1);
+    // Keys, because the picker keys its tiles by them; no assets, because a
+    // fixture run must never reach cdn.sanity.io for a photo that isn't there.
+    expect(pieces.every((piece) => piece.photo._key !== undefined)).toBe(true);
+    expect(pieces.every((piece) => piece.photo.asset === undefined)).toBe(true);
+  });
+
+  it('leaves every other fixture product exactly as it was', () => {
+    const others = [
+      ...sanityFixtures.products('hats'),
+      ...sanityFixtures.products('accessories'),
+    ].filter((product) => product.sellByPiece !== true);
+
+    expect(others).toHaveLength(3);
+    expect(others.every((product) => product.sellByPiece === undefined)).toBe(true);
+    expect(others.every((product) => product.photos === undefined)).toBe(true);
+  });
+
   it('keeps a product whose custom order is the whole product, not a style', () => {
     // The other branch of the same page: no styles at all, one top-level id.
     const hat = sanityFixtures.product('crochet-ruffled-bucket-hat');
@@ -296,6 +322,20 @@ describe('SANITY_FAKE — flag on', () => {
 // ---------------------------------------------------------------------------
 
 describe('the two fixture sets agree', () => {
+  it('stocks one Square variation with exactly as many on hand as there are pieces', async () => {
+    // The pilot's whole inventory model: one variation per sell-by-piece
+    // product, whose count is the total number of physical pieces. Per-piece
+    // SKUs are deliberately not a thing, so this is the only number that can
+    // stop an oversale.
+    vi.stubEnv('SQUARE_FAKE', '1');
+    const bag = sanityFixtures.product('crochet-slouch-bag')!;
+
+    const counts = await realGateway().getInventoryCounts([bag.squareVariationId!]);
+
+    expect(bag.sellByPiece).toBe(true);
+    expect(counts.get(bag.squareVariationId!)).toBe(piecesOf(bag).length);
+  });
+
   it('prices every variation id the fixture products reference', async () => {
     vi.stubEnv('SQUARE_FAKE', '1');
     const products = [

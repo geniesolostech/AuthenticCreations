@@ -51,6 +51,30 @@ describe('/shop/[section] — custom-order banner card', () => {
   });
 });
 
+describe('/shop/[section] — outages vs. an empty shelf', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  test('a Sanity outage propagates as an error rather than rendering an empty grid', async () => {
+    mockedProducts.mockRejectedValue(new Error('network down'));
+
+    // Rendering on would put an empty shelf on the page, and `revalidate = 60`
+    // would then *cache* it — a few seconds of Sanity trouble becoming a minute
+    // of a shop that looks closed. A throw is a retryable 500 that is never
+    // cached, and ISR keeps serving the last good page meanwhile.
+    await expect(renderPage('accessories')).rejects.toThrow('network down');
+  });
+
+  test('an empty answer from Sanity still gets the friendly empty-shelf copy', async () => {
+    mockedProducts.mockResolvedValue([]);
+
+    render(await renderPage('hats'));
+
+    expect(screen.getByText(/still being stitched together/i)).toBeInTheDocument();
+  });
+});
+
 describe('/shop/[section] — page title (Woven spec §3/§4)', () => {
   test('h1 pairs a motif with a rose underline', async () => {
     render(await renderPage('hats'));

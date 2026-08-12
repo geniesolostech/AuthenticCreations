@@ -15,6 +15,22 @@ test('header shows brand name and main nav', () => {
   }
 });
 
+test('header nav reads at a comfortable size, without becoming a redesign', () => {
+  render(<SiteHeader />);
+
+  const wordmark = screen.getByRole('link', { name: /authentic creations/i });
+  expect(wordmark).toHaveClass('text-2xl', 'sm:text-3xl');
+  expect(wordmark).not.toHaveClass('text-xl');
+
+  const nav = screen.getByRole('navigation', { name: 'Main' });
+  expect(nav).toHaveClass('text-lg', 'font-semibold');
+  expect(nav).not.toHaveClass('text-sm');
+
+  // The parts that must not move: links still wrap, and still go rust on hover.
+  expect(nav).toHaveClass('flex-wrap');
+  expect(screen.getByRole('link', { name: 'Hats' })).toHaveClass('hover:text-rust');
+});
+
 test('footer shows tagline and policies link', () => {
   render(<SiteFooter />);
   expect(screen.getByText(/find you in whatever you do/i)).toBeInTheDocument();

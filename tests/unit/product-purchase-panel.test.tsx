@@ -97,4 +97,76 @@ describe('ProductPurchasePanel', () => {
     expect(screen.getByText(/price at checkout/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /add to cart/i })).toBeDisabled();
   });
+
+  test('adds no piece to the line for a product that is not sold by piece', async () => {
+    const user = userEvent.setup();
+    renderWithCart(
+      <ProductPurchasePanel
+        productName="Crochet Beanie"
+        options={[{ label: 'Crochet Beanie', variationId: 'v-1', priceCents: 3200, trackInventory: false }]}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /add to cart/i }));
+
+    const lines = JSON.parse(screen.getByTestId('lines').textContent ?? '[]');
+    expect(lines[0]).toMatchObject({ name: 'Crochet Beanie', quantity: 1 });
+    expect(lines[0]).not.toHaveProperty('piece');
+  });
+});
+
+describe('ProductPurchasePanel — sold by piece', () => {
+  const bag: PurchaseOption[] = [
+    { label: 'Crochet slouch bag', variationId: 'bag-1', priceCents: 6500, trackInventory: false },
+  ];
+
+  test('names the line for the chosen piece and carries the piece onto it', async () => {
+    const user = userEvent.setup();
+    renderWithCart(
+      <ProductPurchasePanel
+        productName="Crochet slouch bag"
+        options={bag}
+        piece={{ number: 1, label: 'Sunset' }}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /add to cart/i }));
+
+    const lines = JSON.parse(screen.getByTestId('lines').textContent ?? '[]');
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({
+      variationId: 'bag-1',
+      name: 'Crochet slouch bag — Sunset',
+      quantity: 1,
+      piece: { number: 1, label: 'Sunset' },
+    });
+  });
+
+  test('numbers an unnamed piece by its position', async () => {
+    const user = userEvent.setup();
+    renderWithCart(
+      <ProductPurchasePanel productName="Crochet slouch bag" options={bag} piece={{ number: 2 }} />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /add to cart/i }));
+
+    const lines = JSON.parse(screen.getByTestId('lines').textContent ?? '[]');
+    expect(lines[0].name).toBe('Crochet slouch bag — Piece 2');
+  });
+
+  test('disables the buy button exactly like a sold-out product when every piece is sold', async () => {
+    const user = userEvent.setup();
+    // Square still counts stock for this variation — it counts pieces without
+    // naming them — so only the seller's per-piece marks can answer this.
+    renderWithCart(
+      <ProductPurchasePanel productName="Crochet slouch bag" options={bag} allPiecesSold />,
+    );
+
+    expect(screen.getAllByText(/sold out/i)).toHaveLength(2);
+    const button = screen.getByRole('button', { name: /sold out/i });
+    expect(button).toBeDisabled();
+
+    await user.click(button);
+    expect(JSON.parse(screen.getByTestId('lines').textContent ?? '[]')).toHaveLength(0);
+  });
 });

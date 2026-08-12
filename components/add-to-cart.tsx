@@ -1,6 +1,7 @@
 'use client';
 
 import { useCart } from '@/lib/cart-context';
+import type { CartLine } from '@/lib/types';
 
 export interface AddToCartProps {
   variationId: string;
@@ -14,6 +15,10 @@ export interface AddToCartProps {
   soldOut?: boolean;
   imageUrl?: string;
   quantity?: number;
+  /** Which one-of-a-kind piece is being bought, on a sell-by-piece product.
+   * Rides onto the cart line, which is where it joins the line's identity and
+   * fixes its quantity at 1. */
+  piece?: CartLine['piece'];
 }
 
 /**
@@ -30,13 +35,14 @@ export default function AddToCart({
   soldOut = false,
   imageUrl,
   quantity = 1,
+  piece,
 }: AddToCartProps) {
   const { add } = useCart();
   const isDisabled = disabled || soldOut || priceCents === null || variationId === '';
 
   function handleClick() {
     if (isDisabled || priceCents === null) return;
-    add({ variationId, name, unitAmount: priceCents, quantity, imageUrl });
+    add({ variationId, name, unitAmount: priceCents, quantity, imageUrl, piece });
     window.dispatchEvent(new CustomEvent('cart:open'));
   }
 

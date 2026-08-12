@@ -60,11 +60,13 @@ export const FIXTURE_VARIATIONS = {
   // No custom lavender on purpose — see the flowers product below.
 } as const;
 
-// Photos are deliberately absent from every fixture product: a Sanity image
-// reference would send `urlFor` to cdn.sanity.io for an asset that does not
-// exist, and the whole point here is a run with no network. The app's own
+// Photo *assets* are deliberately absent from every fixture product: a Sanity
+// image reference would send `urlFor` to cdn.sanity.io for an asset that does
+// not exist, and the whole point here is a run with no network. The app's own
 // `<PlaceholderImage>` covers them, which is the same thing CJ sees before she
-// uploads a photo.
+// uploads a photo. The slouch bag still carries assetless photo *entries*,
+// because on a sell-by-piece product a photo is a piece: without them the
+// picker would have nothing to pick from in fixture mode.
 const PRODUCTS: Product[] = [
   {
     _id: 'fixture-product-ruffled-bucket-hat',
@@ -94,6 +96,17 @@ const PRODUCTS: Product[] = [
     section: 'accessories',
     description: 'A relaxed, roomy slouch bag crocheted for everyday carrying.',
     squareVariationId: FIXTURE_VARIATIONS.slouchBag,
+    // The sell-by-piece product. Three photos means three physical bags, which
+    // is why the Square fixture holds exactly three of this one variation on
+    // hand — the count is the total pieces, and there are no per-piece SKUs.
+    // The three cover every state the picker has to render: named, unnamed
+    // (shown as "Piece 2"), and already sold.
+    sellByPiece: true,
+    photos: [
+      { _key: 'piece-sunset', pieceLabel: 'Sunset' },
+      { _key: 'piece-two' },
+      { _key: 'piece-driftwood', pieceLabel: 'Driftwood', sold: true },
+    ],
     displayOrder: 1,
     featured: true,
   },

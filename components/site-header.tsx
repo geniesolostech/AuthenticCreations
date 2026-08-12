@@ -17,16 +17,16 @@ type SiteHeaderProps = {
 export default function SiteHeader({ children }: SiteHeaderProps) {
   return (
     <header className="bg-cream">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-5 px-4 py-5 sm:px-6 sm:py-6">
         <Link
           href="/"
-          className="font-heading text-xl font-semibold text-charcoal"
+          className="font-heading text-2xl font-semibold text-charcoal sm:text-3xl"
         >
           Authentic Creations
         </Link>
         <nav
           aria-label="Main"
-          className="flex flex-wrap items-center gap-x-6 gap-y-2 font-body text-sm text-charcoal"
+          className="flex flex-wrap items-center gap-x-7 gap-y-3 font-body text-lg font-semibold text-charcoal"
         >
           {NAV_LINKS.map(({ name, href }) => (
             <Link key={href} href={href} className="hover:text-rust">

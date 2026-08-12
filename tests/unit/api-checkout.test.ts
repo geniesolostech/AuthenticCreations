@@ -47,6 +47,13 @@ function customLine(overrides: Record<string, unknown> = {}): Record<string, unk
   });
 }
 
+/** A line for one physical piece of a sell-by-piece product. Its variation is
+ * the ordinary ready-made one — Square counts the pieces without naming them,
+ * so `piece` can only ever add words to the order note. */
+function pieceLine(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return line({ lineId: 'line-3', piece: { number: 2, label: 'Sunset' }, ...overrides });
+}
+
 /**
  * `count` distinct lines of the made-to-order variation, which is untracked and
  * so can never be sold out — the only thing under test is the line count.
@@ -102,6 +109,44 @@ describe('POST /api/checkout — happy path', () => {
     expect(gw.calls.createPaymentLink[0]?.lineItems).toHaveLength(50);
   });
 
+  it('sends the chosen piece to Square as a line-item note', async () => {
+    const response = await POST(post({ lines: [pieceLine()] }));
+
+    expect(response.status).toBe(200);
+    expect(gw.calls.createPaymentLink[0]?.lineItems[0]).toEqual({
+      variationId: 'var-ready',
+      quantity: 1,
+      note: 'Piece: 2 (Sunset)',
+    });
+  });
+
+  it('accepts a piece with no name of its own', async () => {
+    const response = await POST(post({ lines: [pieceLine({ piece: { number: 3 } })] }));
+
+    expect(response.status).toBe(200);
+    expect(gw.calls.createPaymentLink[0]?.lineItems[0]?.note).toBe('Piece: 3');
+  });
+
+  it('accepts the boundary piece name of exactly 80 characters', async () => {
+    const label = 'x'.repeat(80);
+
+    const response = await POST(post({ lines: [pieceLine({ piece: { number: 1, label } })] }));
+
+    expect(response.status).toBe(200);
+    expect(gw.calls.createPaymentLink[0]?.lineItems[0]?.note).toBe(`Piece: 1 (${label})`);
+  });
+
+  it('strips anything else a client invents inside the piece', async () => {
+    // The piece is display data the client asserts; nothing it carries may
+    // reach Square except the number and the name.
+    const response = await POST(
+      post({ lines: [pieceLine({ piece: { number: 2, label: 'Sunset', priceCents: 1, sold: false } })] }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(gw.calls.createPaymentLink[0]?.lineItems[0]?.note).toBe('Piece: 2 (Sunset)');
+  });
+
   it('strips unknown fields instead of forwarding them to Square', async () => {
     const response = await POST(
       post({
@@ -150,6 +195,13 @@ describe('POST /api/checkout — 400 invalid body', () => {
     ['a negative unitAmount', { lines: [line({ unitAmount: -1 })] }],
     ['a fractional unitAmount', { lines: [line({ unitAmount: 45.5 })] }],
     ['a string unitAmount', { lines: [line({ unitAmount: '4500' })] }],
+    ['a piece numbered 0', { lines: [pieceLine({ piece: { number: 0 } })] }],
+    ['a negative piece number', { lines: [pieceLine({ piece: { number: -2 } })] }],
+    ['a fractional piece number', { lines: [pieceLine({ piece: { number: 1.5 } })] }],
+    ['a string piece number', { lines: [pieceLine({ piece: { number: '2' } })] }],
+    ['a piece with no number', { lines: [pieceLine({ piece: { label: 'Sunset' } })] }],
+    ['an 81-character piece name', { lines: [pieceLine({ piece: { number: 1, label: 'x'.repeat(81) } })] }],
+    ['a piece that is not an object', { lines: [pieceLine({ piece: 'Sunset' })] }],
   ];
 
   for (const [label, body] of badBodies) {

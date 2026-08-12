@@ -60,6 +60,28 @@ describe('/shop/[section]/custom — page title (Woven spec §3/§4)', () => {
   });
 });
 
+describe('/shop/[section]/custom — outages vs. an empty catalog', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  test('a Sanity outage propagates as an error rather than rendering "no hats yet"', async () => {
+    mockedProducts.mockRejectedValue(new Error('network down'));
+
+    // Under `revalidate = 60`, carrying on would cache "we don't have any hats
+    // yet" — a Sanity hiccup outliving itself as a shop that looks empty.
+    await expect(renderPage('hats')).rejects.toThrow('network down');
+  });
+
+  test('an empty answer from Sanity still gets the friendly copy', async () => {
+    mockedProducts.mockResolvedValue([]);
+
+    render(await renderPage('hats'));
+
+    expect(screen.getByText(/we don't have any hats yet/i)).toBeInTheDocument();
+  });
+});
+
 describe('/shop/[section]/custom — picker grid wiring', () => {
   test('passes the picker grid through to CustomOrderForm unchanged', async () => {
     mockedProducts.mockResolvedValue([product()]);

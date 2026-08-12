@@ -238,22 +238,45 @@ export async function createCheckout(
 }
 
 function toLineItem(line: CartLine): { variationId: string; quantity: number; note?: string } {
-  if (line.custom === undefined) {
+  const note = lineNote(line);
+  if (note === undefined) {
     return { variationId: line.variationId, quantity: line.quantity };
   }
-  return {
-    variationId: line.variationId,
-    quantity: line.quantity,
-    note: customNote(line.custom.color, line.custom.comments),
-  };
+  return { variationId: line.variationId, quantity: line.quantity, note };
+}
+
+/**
+ * Everything the maker needs to read off this line, or `undefined` when the
+ * line is an ordinary one and Square should carry no note at all.
+ *
+ * Both parts are client-asserted display text — neither has any say in what is
+ * charged — so both are composed here and truncated once, together, to Square's
+ * limit. A line is a custom order or a chosen piece in practice, never both;
+ * the join is written to survive both anyway rather than silently drop one.
+ */
+function lineNote(line: CartLine): string | undefined {
+  const parts: string[] = [];
+  if (line.custom !== undefined) parts.push(customNote(line.custom.color, line.custom.comments));
+  if (line.piece !== undefined) parts.push(pieceNote(line.piece.number, line.piece.label));
+  if (parts.length === 0) return undefined;
+  return truncateToLimit(parts.join(' '), SQUARE_LINE_ITEM_NOTE_MAX);
 }
 
 /**
  * The exact note the maker sees on the Square order for a custom piece.
- * Format is fixed by spec (em dash, U+2014) and truncated to Square's limit.
+ * Format is fixed by spec (em dash, U+2014).
  */
 function customNote(color: string, comments: string): string {
-  return truncateToLimit(`Custom order — Color: ${color}. ${comments}`, SQUARE_LINE_ITEM_NOTE_MAX);
+  return `Custom order — Color: ${color}. ${comments}`;
+}
+
+/**
+ * Which physical piece of a one-of-a-kind product was bought: `Piece: 3
+ * (Sunset)`, or `Piece: 3` when the seller never named it. The number is what
+ * she counts by; the name is a courtesy, so it goes in parentheses after it.
+ */
+function pieceNote(number: number, label?: string): string {
+  return label === undefined || label === '' ? `Piece: ${number}` : `Piece: ${number} (${label})`;
 }
 
 /**

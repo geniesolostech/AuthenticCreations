@@ -170,6 +170,77 @@ describe('createCheckout', () => {
     expect(gw.calls.createPaymentLink[0].lineItems[0].note).toBeUndefined();
   });
 
+  it('names the chosen piece in the note, number first', async () => {
+    const gw = shopGateway();
+
+    await createCheckout([line({ piece: { number: 3, label: 'Sunset' } })], gw);
+
+    // The number is what the maker counts by; the name is a courtesy.
+    expect(gw.calls.createPaymentLink[0].lineItems[0].note).toBe('Piece: 3 (Sunset)');
+  });
+
+  it('writes just the number when the piece was never named', async () => {
+    const gw = shopGateway();
+
+    await createCheckout([line({ piece: { number: 3 } })], gw);
+
+    expect(gw.calls.createPaymentLink[0].lineItems[0].note).toBe('Piece: 3');
+  });
+
+  it('keeps a piece line at the catalog price, exactly like any other line', async () => {
+    // The whole trust model in one test: a piece is words on the order, and
+    // nothing about it touches what the shopper is charged.
+    const gw = shopGateway();
+
+    const result = await createCheckout(
+      [line({ unitAmount: 4000, piece: { number: 1, label: 'Sunset' } })],
+      gw,
+    );
+
+    expect(result).toEqual({ ok: false, error: 'PRICE_CHANGED', prices: { 'var-ready': 4500 } });
+  });
+
+  it('carries both a custom order and a piece when a line somehow has both', async () => {
+    const gw = shopGateway();
+
+    await createCheckout(
+      [
+        line({
+          variationId: 'var-custom',
+          unitAmount: 6000,
+          custom: { color: 'Red', comments: 'For my sister.' },
+          piece: { number: 2 },
+        }),
+      ],
+      gw,
+    );
+
+    // Not a combination the shop offers, but dropping half of a note the maker
+    // needs would be a worse answer than joining the two.
+    expect(gw.calls.createPaymentLink[0].lineItems[0].note).toBe(
+      'Custom order — Color: Red. For my sister. Piece: 2',
+    );
+  });
+
+  it('truncates a note carrying both parts to the same limit', async () => {
+    const gw = shopGateway();
+
+    const result = await createCheckout(
+      [
+        line({
+          variationId: 'var-custom',
+          unitAmount: 6000,
+          custom: { color: 'Green', comments: 'x'.repeat(SQUARE_LINE_ITEM_NOTE_MAX) },
+          piece: { number: 2, label: 'Sunset' },
+        }),
+      ],
+      gw,
+    );
+
+    expect(result.ok).toBe(true);
+    expect(gw.calls.createPaymentLink[0].lineItems[0].note).toHaveLength(SQUARE_LINE_ITEM_NOTE_MAX);
+  });
+
   it("truncates an over-long custom note to Square's line-item note limit", async () => {
     const gw = shopGateway();
     const cart = [

@@ -127,6 +127,39 @@ describe('product.variants[].customSquareVariationId — not asked for at all', 
   });
 });
 
+describe('product.sellByPiece and the per-photo piece fields', () => {
+  test('sellByPiece is an opt-in boolean that starts off', () => {
+    // Off by default is the whole safety of the pilot: every product CJ has
+    // today keeps the behaviour it has today until she turns this on.
+    const flag = field('sellByPiece');
+
+    expect(flag.type).toBe('boolean');
+    expect(flag.initialValue).toBe(false);
+    expect(flag.description).toMatch(/one-of-a-kind/i);
+  });
+
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const photoMember = (field('photos').of as any[])[0];
+
+  test('photos keep the hotspot option they were authored with', () => {
+    expect(photoMember.type).toBe('image');
+    expect(photoMember.options).toEqual({ hotspot: true });
+  });
+
+  test('each photo carries an optional piece name and an optional sold mark', () => {
+    const fields = photoMember.fields as any[];
+
+    expect(fields.map((f) => f.name)).toEqual(['pieceLabel', 'sold']);
+    // Neither is demanded, at any level: every photo uploaded before this
+    // existed has neither, and the site reads that as "unnamed, still for
+    // sale" rather than as an unfinished document.
+    expect(fields.every((f) => f.validation === undefined)).toBe(true);
+    expect(fields.find((f) => f.name === 'sold').initialValue).toBe(false);
+    expect(fields.find((f) => f.name === 'sold').description).toMatch(/cannot be bought/i);
+  });
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+});
+
 describe('product.variants[].squareVariationId — asked for, not demanded', () => {
   test('is a warning, so a seeded product can still be published', () => {
     // The seed creates Crochet flowers with three labelled variants and no ids

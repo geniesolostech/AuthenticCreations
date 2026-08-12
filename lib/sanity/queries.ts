@@ -9,6 +9,15 @@ import { sanityFixtures, sanityFixturesEnabled } from './fixtures';
 
 export interface SanityImage {
   asset?: { _ref: string; _type: 'reference' };
+  /** Sanity's own array-item key, present on images that live in an array
+   * (product photos). Optional for the same reason `ProductVariant._key` is. */
+  _key?: string;
+  /** Both only carry meaning on a `sellByPiece` product's photos, where one
+   * photo *is* one physical piece. Absent on every photo authored before the
+   * fields existed, which reads as an unlabelled piece that is still for sale
+   * — never as missing data. */
+  pieceLabel?: string;
+  sold?: boolean;
   [key: string]: unknown;
 }
 
@@ -36,6 +45,10 @@ export interface Product {
   section: Section;
   description?: string;
   photos?: SanityImage[];
+  /** When true, every photo above is a different one-of-a-kind piece and the
+   * shopper picks which one they are buying. Absent on every other product,
+   * which behaves exactly as it always has. */
+  sellByPiece?: boolean;
   squareVariationId?: string;
   customSquareVariationId?: string;
   variants?: ProductVariant[];
@@ -88,13 +101,29 @@ export interface PoliciesPage {
 // network call (see tests/unit/queries.test.ts).
 // ---------------------------------------------------------------------------
 
+/**
+ * `photos` spells its fields out rather than riding whole, because a photo on a
+ * `sellByPiece` product is a piece: `_key`, `pieceLabel` and `sold` are as
+ * load-bearing as the asset itself. `asset`/`hotspot`/`crop` are named here to
+ * keep `urlFor` cropping exactly what it cropped before the fields were split
+ * out; `_key` is what the picker keys its tiles by.
+ */
 const PRODUCT_PROJECTION = `{
   _id,
   title,
   "slug": slug.current,
   section,
   description,
-  photos,
+  photos[]{
+    _key,
+    _type,
+    asset,
+    hotspot,
+    crop,
+    pieceLabel,
+    sold
+  },
+  sellByPiece,
   squareVariationId,
   customSquareVariationId,
   variants[]{

@@ -17,6 +17,7 @@ import {
   MAX_CART_LINES,
   MAX_LINE_QUANTITY,
   MIN_LINE_QUANTITY,
+  PIECE_LABEL_MAX,
 } from '@/lib/constants';
 
 /** Upper bound on ids per inventory request — one storefront page's worth. */
@@ -30,6 +31,11 @@ export const MAX_INVENTORY_IDS = 50;
  * `unitAmount` is validated for *shape* only (non-negative integer cents). It is
  * never trusted as a price: the service re-reads the real price from the Square
  * catalog and only ever compares this value against it.
+ *
+ * `piece` is the same kind of claim as `custom`: which one-of-a-kind piece of a
+ * product the shopper chose. Every piece of a product shares one Square
+ * variation, so this can only ever add words to the order note — price and
+ * stock still come from the catalog, by variation id.
  */
 export const cartLineSchema = z.object({
   lineId: z.string().min(1),
@@ -42,6 +48,14 @@ export const cartLineSchema = z.object({
     .object({
       color: z.enum(CUSTOM_COLORS),
       comments: z.string().max(CUSTOM_COMMENTS_MAX),
+    })
+    .optional(),
+  piece: z
+    .object({
+      // 1-based, because that is how the pieces are numbered everywhere a
+      // human reads them: on the page, in the cart, and on the order.
+      number: z.number().int().min(1),
+      label: z.string().max(PIECE_LABEL_MAX).optional(),
     })
     .optional(),
 });

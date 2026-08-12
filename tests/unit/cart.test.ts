@@ -53,6 +53,41 @@ describe('addLine', () => {
   });
 });
 
+describe('addLine — one-of-a-kind pieces', () => {
+  test('keeps two pieces of the same variation as two lines', () => {
+    // Every piece of a product shares one Square variation, so variation alone
+    // would merge two different bags into a single line of two.
+    let lines = addLine([], makeLine({ piece: { number: 1, label: 'Sunset' } }));
+    lines = addLine(lines, makeLine({ piece: { number: 2 } }));
+
+    expect(lines).toHaveLength(2);
+    expect(lines.map((line) => line.piece?.number)).toEqual([1, 2]);
+  });
+
+  test('adding the same piece again neither duplicates the line nor raises the quantity', () => {
+    const piece = makeLine({ piece: { number: 1, label: 'Sunset' } });
+    let lines = addLine([], piece);
+    lines = addLine(lines, piece);
+
+    expect(lines).toHaveLength(1);
+    expect(lines[0].quantity).toBe(1);
+  });
+
+  test('never merges a piece line into the plain line for the same variation', () => {
+    let lines = addLine([], makeLine());
+    lines = addLine(lines, makeLine({ piece: { number: 1 } }));
+
+    expect(lines).toHaveLength(2);
+    expect(lines[0].piece).toBeUndefined();
+  });
+
+  test('clamps a piece line to one, however many were asked for', () => {
+    const lines = addLine([], makeLine({ quantity: 4, piece: { number: 1 } }));
+
+    expect(lines[0].quantity).toBe(1);
+  });
+});
+
 describe('setQuantity', () => {
   test('clamps quantity to the 1..10 range', () => {
     let lines = addLine([], makeLine({ quantity: 1 }));
@@ -62,6 +97,17 @@ describe('setQuantity', () => {
     expect(lines[0].quantity).toBe(10);
 
     lines = setQuantity(lines, lineId, -5);
+    expect(lines[0].quantity).toBe(1);
+  });
+
+  test('pins a piece line at one, whatever it is asked for', () => {
+    let lines = addLine([], makeLine({ piece: { number: 1, label: 'Sunset' } }));
+    const lineId = lines[0].lineId;
+
+    lines = setQuantity(lines, lineId, 2);
+    expect(lines[0].quantity).toBe(1);
+
+    lines = setQuantity(lines, lineId, 10);
     expect(lines[0].quantity).toBe(1);
   });
 });

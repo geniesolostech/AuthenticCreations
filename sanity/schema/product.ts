@@ -39,10 +39,44 @@ export default defineType({
       type: 'text',
     }),
     defineField({
+      name: 'sellByPiece',
+      title: 'Sell by piece',
+      description:
+        'Each photo of this product shows a different one-of-a-kind piece; shoppers choose which one they’re buying.',
+      type: 'boolean',
+      initialValue: false,
+    }),
+    defineField({
       name: 'photos',
       title: 'Photos',
       type: 'array',
-      of: [{ type: 'image', options: { hotspot: true } }],
+      of: [
+        {
+          type: 'image',
+          options: { hotspot: true },
+          // Both fields only mean anything on a "sell by piece" product, and
+          // both are optional: photos authored before this existed carry
+          // neither, and the site has to read that as "unlabelled, not sold"
+          // rather than as missing data.
+          fields: [
+            defineField({
+              name: 'pieceLabel',
+              title: 'Piece name',
+              description:
+                'A name for this one piece, e.g. “Sunset”. Shown to shoppers and written on the order. Leave empty to call it “Piece 1”, “Piece 2”, and so on.',
+              type: 'string',
+            }),
+            defineField({
+              name: 'sold',
+              title: 'Sold',
+              description:
+                'Mark ON when this piece has been sold; it stays visible with a Sold badge and cannot be bought.',
+              type: 'boolean',
+              initialValue: false,
+            }),
+          ],
+        },
+      ],
     }),
     defineField({
       name: 'squareVariationId',

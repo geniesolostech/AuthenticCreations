@@ -68,6 +68,9 @@ const CATALOG: FixtureVariation[] = [
     trackInventory: true,
     onHand: 0,
   },
+  // Sold by piece on the Sanity side: one variation, and the count is the
+  // total number of physical bags (three photos, three bags). Square never
+  // learns which one a shopper picked — that rides in the order note.
   { id: FIXTURE_VARIATIONS.slouchBag, priceCents: 6500, trackInventory: true, onHand: 3 },
   { id: FIXTURE_VARIATIONS.flowerRose, priceCents: 900, trackInventory: true, onHand: 12 },
   { id: FIXTURE_VARIATIONS.flowerTulip, priceCents: 900, trackInventory: true, onHand: 8 },

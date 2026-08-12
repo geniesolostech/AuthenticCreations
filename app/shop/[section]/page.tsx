@@ -31,14 +31,20 @@ export default async function ShopSectionPage({
   const { section } = await params;
   if (!isSection(section)) notFound();
 
-  // Sanity is expected to be reachable (Task 3's locked interface); still
-  // guarded so a Sanity hiccup degrades to an empty-shelf message rather than
-  // a crashed page.
-  let products: Product[] = [];
+  // Logged and rethrown, deliberately — the same reasoning as the detail page.
+  // Rendering on despite the failure puts an empty shelf on the page, and
+  // `revalidate = 60` then *stores* it: a few seconds of Sanity trouble becomes
+  // up to a minute of a shop that looks closed (the accessories grid showing
+  // nothing but the custom-order card). A throw is a 500 — retryable, never
+  // cached, and ISR keeps serving the last good page meanwhile. An empty list
+  // Sanity actually answered with is not a failure and still reaches the
+  // friendly copy below.
+  let products: Product[];
   try {
     products = await getProducts(section);
   } catch (error) {
     console.error('[shop] failed to fetch products from Sanity', error);
+    throw error;
   }
 
   const ids = [...new Set(products.map(primaryVariationId).filter((id) => id !== ''))];

@@ -16,6 +16,15 @@ export const CUSTOM_COLOR_SWATCHES: Record<(typeof CUSTOM_COLORS)[number], strin
 };
 export const CUSTOM_COMMENTS_MAX = 500;
 /**
+ * Longest piece name a checkout line may carry.
+ *
+ * Like the custom comments, a piece name is display data the client asserts:
+ * it travels to the maker in the Square order note and touches neither price
+ * nor stock. The cap exists so nobody gets to choose how much text this
+ * endpoint carries, and sits far above the names a piece actually gets.
+ */
+export const PIECE_LABEL_MAX = 80;
+/**
  * Most distinct lines one cart may hold. A real cart is a handful of items; the
  * ceiling exists so an anonymous caller cannot make the checkout endpoint do
  * unbounded work (a Square order caps out at 1000 line items regardless).

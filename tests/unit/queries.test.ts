@@ -43,6 +43,19 @@ describe('product queries', () => {
     }
     expect(PRODUCTS_QUERY.match(/customSquareVariationId/g)).toHaveLength(2);
   });
+
+  test('the photo sub-projection carries the piece fields and everything urlFor needs', () => {
+    // `photos` used to ride whole. Now that a photo can *be* a piece, the
+    // fields are named — which means the ones the image URL builder crops with
+    // have to be named too, or every hotspot in the shop quietly stops working.
+    for (const query of [PRODUCTS_QUERY, PRODUCT_QUERY, FEATURED_PRODUCTS_QUERY]) {
+      expect(query).toContain('photos[]{');
+      for (const field of ['_key', 'asset', 'hotspot', 'crop', 'pieceLabel', 'sold']) {
+        expect(query).toContain(field);
+      }
+      expect(query).toContain('sellByPiece');
+    }
+  });
 });
 
 describe('post queries', () => {

@@ -67,6 +67,19 @@ describe('/cart', () => {
     expect(screen.getByTestId('cart-subtotal')).toHaveTextContent('$64.00');
   });
 
+  test('the stepper on a one-of-a-kind piece is pinned at one, and says why', () => {
+    renderWithCart(<CartPage />, [
+      makeLine({ name: 'Crochet slouch bag — Sunset', piece: { number: 1, label: 'Sunset' } }),
+    ]);
+
+    // Both ends disabled at once: there is exactly one of this bag, so the
+    // stepper has nowhere to go in either direction.
+    expect(screen.getByRole('button', { name: /increase quantity/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /decrease quantity/i })).toBeDisabled();
+    expect(screen.getByText('one of a kind')).toBeInTheDocument();
+    expect(screen.queryByText(/max 10 per order/i)).not.toBeInTheDocument();
+  });
+
   test('a SOLD_OUT checkout marks every affected row on the page', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ error: 'SOLD_OUT', soldOutIds: ['var-gone'] }), { status: 409 }),

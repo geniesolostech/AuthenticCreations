@@ -8,7 +8,19 @@ export interface CartLine {
   variationId: string; // Square catalog variation id
   name: string; // display name, e.g. "Crochet Beanie" or "Custom: Crochet Beanie"
   unitAmount: number; // cents at add-time (server re-checks at checkout)
-  quantity: number; // 1..10
+  quantity: number; // 1..10 — always exactly 1 on a `piece` line
   imageUrl?: string;
   custom?: { color: CustomColor; comments: string };
+  /**
+   * Which one-of-a-kind piece of a `sellByPiece` product this line is, numbered
+   * from 1 by the product's photo order.
+   *
+   * Every piece of a product shares one Square variation (Square counts the
+   * pieces, it does not name them), so this is display data the client asserts
+   * — it rides to the maker in the order note and nowhere near the price or the
+   * stock check. It is also part of the line's identity: without it two
+   * different pieces would merge into one cart line, since their variation ids
+   * match.
+   */
+  piece?: { number: number; label?: string };
 }
