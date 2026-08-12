@@ -46,11 +46,16 @@ export default async function CustomOrderPage({
 
   // Every product in the section gets a card, custom SKU or not (pre-launch
   // catalog state can leave `customSquareVariationId` empty for some/all of
-  // them) — only products that have one need a price lookup.
+  // them) — only products that have one need a price lookup. A product sold in
+  // styles (crochet flowers) carries the ids on its variants instead, one per
+  // style Square can charge for.
   const ids = [
     ...new Set(
       products
-        .map((product) => product.customSquareVariationId)
+        .flatMap((product) => [
+          product.customSquareVariationId,
+          ...(product.variants ?? []).map((variant) => variant.customSquareVariationId),
+        ])
         .filter((id): id is string => !!id),
     ),
   ];
@@ -59,12 +64,31 @@ export default async function CustomOrderPage({
   const options: CustomProductOption[] = products.map((product) => {
     const customVariationId = product.customSquareVariationId ?? null;
     const info = customVariationId ? variations.get(customVariationId) : undefined;
+    const variants = (product.variants ?? []).flatMap((variant) => {
+      const id = variant.customSquareVariationId;
+      // A style with no custom SKU in Square yet — lavender, until CJ builds
+      // one — is left off the picker entirely rather than offered as a choice
+      // that cannot be priced or charged.
+      if (!id) return [];
+      return [
+        {
+          key: variant._key ?? id,
+          label: variant.label,
+          customVariationId: id,
+          priceCents: variations.get(id)?.priceCents ?? null,
+        },
+      ];
+    });
     const photo = product.photos?.[0];
     return {
       id: product._id,
       title: product.title,
       customVariationId,
-      priceCents: info?.priceCents ?? null,
+      // The card can only show one number, and every style of a piece is priced
+      // the same in the catalog, so the first one speaks for all of them; a
+      // range would be inventing a distinction the shop does not make.
+      priceCents: variants.length > 0 ? variants[0].priceCents : (info?.priceCents ?? null),
+      variants,
       imageUrl: photo?.asset ? urlFor(photo).width(300).height(300).fit('crop').auto('format').url() : undefined,
     };
   });

@@ -274,4 +274,206 @@ describe('CustomOrderForm', () => {
     // the reveal-grid class and grid layout, not the a11y semantics.
     expect(group).not.toHaveClass('reveal-grid');
   });
+
+  test('a product ordered custom as one thing shows no style picker', () => {
+    renderWithCart(<CustomOrderForm products={products} />);
+
+    expect(screen.queryByRole('group', { name: /pick a style/i })).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Products sold in styles — crochet flowers, where a custom rose and a custom
+ * tulip are two Square variations of one "Custom crochet flowers" item. The
+ * product's own `customVariationId` is null throughout: the ids live on the
+ * styles, which is what makes the "no style chosen" state worth guarding.
+ */
+const flowerStyles: CustomProductOption = {
+  id: 'p-flowers',
+  title: 'Crochet flowers',
+  customVariationId: null,
+  priceCents: 800,
+  variants: [
+    { key: 'variant-rose', label: 'Rose', customVariationId: 'cust-flower-rose', priceCents: 800 },
+    { key: 'variant-tulip', label: 'Tulip', customVariationId: 'cust-flower-tulip', priceCents: 900 },
+  ],
+};
+
+const styleProducts: CustomProductOption[] = [flowerStyles, products[0]];
+
+describe('CustomOrderForm — products sold in styles', () => {
+  test('renders one style button per style, none of them pressed to begin with', () => {
+    renderWithCart(<CustomOrderForm products={styleProducts} />);
+
+    const group = screen.getByRole('group', { name: /pick a style/i });
+    const styles = within(group).getAllByRole('button');
+    expect(styles.map((button) => button.textContent)).toEqual(['Rose', 'Tulip']);
+    for (const style of styles) {
+      expect(style).toHaveAttribute('aria-pressed', 'false');
+    }
+  });
+
+  test('a style with no custom SKU in Square is left off the picker entirely', () => {
+    // The page drops it before it gets here (lavender, until CJ builds one),
+    // so the picker only ever offers styles that can actually be charged for.
+    renderWithCart(<CustomOrderForm products={styleProducts} />);
+
+    const group = screen.getByRole('group', { name: /pick a style/i });
+    expect(within(group).queryByRole('button', { name: 'Lavender' })).not.toBeInTheDocument();
+  });
+
+  test('submitting without a style asks for one and adds nothing', async () => {
+    const user = userEvent.setup();
+    renderWithCart(<CustomOrderForm products={styleProducts} />);
+
+    await user.click(screen.getByRole('button', { name: 'Red' }));
+    await user.click(screen.getByRole('button', { name: /add to cart/i }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('pick a style for your piece');
+    expect(readLines()).toHaveLength(0);
+  });
+
+  test('the ask clears as soon as a style is picked', async () => {
+    const user = userEvent.setup();
+    renderWithCart(<CustomOrderForm products={styleProducts} />);
+
+    await user.click(screen.getByRole('button', { name: /add to cart/i }));
+    expect(screen.getByText('pick a style for your piece')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Rose' }));
+
+    expect(screen.queryByText('pick a style for your piece')).not.toBeInTheDocument();
+  });
+
+  test('the chosen style prices the order and names the cart line', async () => {
+    const user = userEvent.setup();
+    renderWithCart(<CustomOrderForm products={styleProducts} />);
+
+    await user.click(screen.getByRole('button', { name: 'Tulip' }));
+    await user.click(screen.getByRole('button', { name: 'Green' }));
+    await user.type(screen.getByLabelText(/tell us what you have in mind/i), 'two of them please');
+    await user.click(screen.getByRole('button', { name: /add to cart/i }));
+
+    const lines = readLines();
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({
+      variationId: 'cust-flower-tulip',
+      name: 'Custom: Crochet flowers — Tulip',
+      unitAmount: 900,
+      quantity: 1,
+      custom: { color: 'Green', comments: 'two of them please' },
+    });
+  });
+
+  test('the displayed price follows the chosen style, and the first one until then', async () => {
+    const user = userEvent.setup();
+    renderWithCart(<CustomOrderForm products={styleProducts} />);
+
+    // The card price the page sourced from the first style stands in while no
+    // style is chosen — the form never shows a range.
+    expect(screen.getByTestId('custom-price')).toHaveTextContent('$8.00');
+
+    await user.click(screen.getByRole('button', { name: 'Tulip' }));
+    expect(screen.getByTestId('custom-price')).toHaveTextContent('$9.00');
+
+    await user.click(screen.getByRole('button', { name: 'Rose' }));
+    expect(screen.getByTestId('custom-price')).toHaveTextContent('$8.00');
+  });
+
+  test('aria-pressed moves with the selection, one style at a time', async () => {
+    const user = userEvent.setup();
+    renderWithCart(<CustomOrderForm products={styleProducts} />);
+
+    const rose = screen.getByRole('button', { name: 'Rose' });
+    const tulip = screen.getByRole('button', { name: 'Tulip' });
+
+    await user.click(rose);
+    expect(rose).toHaveAttribute('aria-pressed', 'true');
+    expect(tulip).toHaveAttribute('aria-pressed', 'false');
+
+    await user.click(tulip);
+    expect(rose).toHaveAttribute('aria-pressed', 'false');
+    expect(tulip).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('the selected style wears the rust voice and the rest stay khaki', async () => {
+    const user = userEvent.setup();
+    renderWithCart(<CustomOrderForm products={styleProducts} />);
+
+    const rose = screen.getByRole('button', { name: 'Rose' });
+    expect(rose).toHaveClass('border-khaki');
+
+    await user.click(rose);
+
+    expect(rose).toHaveClass('border-rust');
+    expect(screen.getByRole('button', { name: 'Tulip' })).toHaveClass('border-khaki');
+  });
+
+  test('a style can be chosen from the keyboard', async () => {
+    const user = userEvent.setup();
+    renderWithCart(<CustomOrderForm products={styleProducts} />);
+
+    const tulip = screen.getByRole('button', { name: 'Tulip' });
+    tulip.focus();
+    await user.keyboard('{Enter}');
+
+    expect(tulip).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('switching products drops the chosen style and hides the picker', async () => {
+    const user = userEvent.setup();
+    renderWithCart(<CustomOrderForm products={styleProducts} />);
+
+    await user.click(screen.getByRole('button', { name: 'Tulip' }));
+    await user.click(screen.getByRole('button', { name: /custom beanie/i }));
+
+    // No styles on the beanie, so no picker — and the order it adds is the
+    // plain one, proving the tulip did not survive the switch.
+    expect(screen.queryByRole('group', { name: /pick a style/i })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Blue' }));
+    await user.click(screen.getByRole('button', { name: /add to cart/i }));
+
+    expect(readLines()[0]).toMatchObject({
+      variationId: 'cust-beanie-1',
+      name: 'Custom: Custom Beanie',
+      unitAmount: 4500,
+    });
+  });
+
+  test('coming back to the styled product asks for a style again', async () => {
+    const user = userEvent.setup();
+    renderWithCart(<CustomOrderForm products={styleProducts} />);
+
+    await user.click(screen.getByRole('button', { name: 'Rose' }));
+    await user.click(screen.getByRole('button', { name: /custom beanie/i }));
+    await user.click(screen.getByRole('button', { name: /crochet flowers/i }));
+
+    expect(screen.getByRole('button', { name: 'Rose' })).toHaveAttribute('aria-pressed', 'false');
+
+    await user.click(screen.getByRole('button', { name: 'Purple' }));
+    await user.click(screen.getByRole('button', { name: /add to cart/i }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('pick a style for your piece');
+    expect(readLines()).toHaveLength(0);
+  });
+
+  test('a style Square could not price disables Add to Cart', async () => {
+    const user = userEvent.setup();
+    const unpriced: CustomProductOption[] = [
+      {
+        ...flowerStyles,
+        variants: [
+          flowerStyles.variants![0],
+          { key: 'variant-tulip', label: 'Tulip', customVariationId: 'cust-flower-tulip', priceCents: null },
+        ],
+      },
+    ];
+    renderWithCart(<CustomOrderForm products={unpriced} />);
+
+    await user.click(screen.getByRole('button', { name: 'Tulip' }));
+
+    expect(screen.getByTestId('custom-price')).toHaveTextContent('Price at checkout');
+    expect(screen.getByRole('button', { name: /add to cart/i })).toBeDisabled();
+  });
 });

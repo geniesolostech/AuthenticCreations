@@ -113,6 +113,20 @@ describe('product.squareVariationId — exclusive with variants', () => {
   });
 });
 
+describe('product.variants[].customSquareVariationId — not asked for at all', () => {
+  test('carries no validation, so a style with no custom SKU still publishes', () => {
+    // Lavender has no "Custom — crochet flowers" variation in Square yet, and
+    // may never. The custom page reads a missing id as "this style is not
+    // offered custom" and leaves it off the picker, so there is nothing here
+    // for Studio to nag about.
+    const customId = variantField('customSquareVariationId');
+
+    expect(customId.type).toBe('string');
+    expect(customId.validation).toBeUndefined();
+    expect(customId.title).toBe('Custom Square Variation ID');
+  });
+});
+
 describe('product.variants[].squareVariationId — asked for, not demanded', () => {
   test('is a warning, so a seeded product can still be published', () => {
     // The seed creates Crochet flowers with three labelled variants and no ids

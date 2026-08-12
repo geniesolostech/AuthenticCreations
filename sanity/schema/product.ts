@@ -103,6 +103,18 @@ export default defineType({
                   'Paste this variant’s Square variation ID before launch — until you do, this variant shows “Price at checkout” and cannot be bought.',
                 ),
             }),
+            defineField({
+              name: 'customSquareVariationId',
+              title: 'Custom Square Variation ID',
+              description:
+                'The matching "Custom — [product]" Square item’s variation id for this variant, if this variant can be ordered custom.',
+              // No validation at all, not even a warning: an empty one is a
+              // real catalog state, not an oversight. The custom page offers
+              // only the variants that have an id, so a variant CJ has not
+              // built a custom SKU for yet is simply absent from the picker
+              // rather than shown as an unbuyable choice.
+              type: 'string',
+            }),
           ],
           preview: {
             select: { title: 'label', subtitle: 'squareVariationId' },

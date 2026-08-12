@@ -17,8 +17,16 @@ export interface SanityImage {
 export type PortableTextBlock = { _type: string; [key: string]: unknown };
 
 export interface ProductVariant {
+  /** Sanity's own array-item key. Optional because `scripts/seed-sanity.ts`
+   * writes variants without one; anything keying off it needs a fallback. */
+  _key?: string;
   label: string;
   squareVariationId: string;
+  /** This variant's "Custom — [product]" Square variation id, when the variant
+   * can be ordered custom (crochet flowers price a custom rose and a custom
+   * tulip separately from the ready-made ones). Undefined for a variant with no
+   * custom SKU in Square yet, which the custom page reads as "not offered". */
+  customSquareVariationId?: string;
 }
 
 export interface Product {
@@ -89,7 +97,12 @@ const PRODUCT_PROJECTION = `{
   photos,
   squareVariationId,
   customSquareVariationId,
-  variants,
+  variants[]{
+    _key,
+    label,
+    squareVariationId,
+    customSquareVariationId
+  },
   displayOrder,
   featured
 }`;

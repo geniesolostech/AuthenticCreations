@@ -32,6 +32,17 @@ describe('product queries', () => {
     expect(FEATURED_PRODUCTS_QUERY).toContain('_type == "product"');
     expect(FEATURED_PRODUCTS_QUERY).toContain('featured == true');
   });
+
+  test('the shared projection spells out the variant fields, per-variant custom id included', () => {
+    // The custom page builds its style picker from these; a bare `variants`
+    // would still return them, but naming them is what stops a later edit to
+    // the sub-projection from quietly dropping the one the picker needs.
+    for (const query of [PRODUCTS_QUERY, PRODUCT_QUERY, FEATURED_PRODUCTS_QUERY]) {
+      expect(query).toContain('variants[]{');
+      expect(query).toContain('customSquareVariationId');
+    }
+    expect(PRODUCTS_QUERY.match(/customSquareVariationId/g)).toHaveLength(2);
+  });
 });
 
 describe('post queries', () => {

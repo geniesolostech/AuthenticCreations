@@ -55,6 +55,9 @@ export const FIXTURE_VARIATIONS = {
   flowerRose: 'FAKEVAR-FLOWER-ROSE',
   flowerTulip: 'FAKEVAR-FLOWER-TULIP',
   flowerLavender: 'FAKEVAR-FLOWER-LAVENDER',
+  customFlowerRose: 'FAKEVAR-CUSTOM-FLOWER-ROSE',
+  customFlowerTulip: 'FAKEVAR-CUSTOM-FLOWER-TULIP',
+  // No custom lavender on purpose — see the flowers product below.
 } as const;
 
 // Photos are deliberately absent from every fixture product: a Sanity image
@@ -104,10 +107,28 @@ const PRODUCTS: Product[] = [
     // it empty, because the grid and the detail page source their variation
     // differently and authoring both would price the tile from one and the
     // buy button from the other. The runbook's pre-flight says the same thing.
+    // Two of the three styles can also be ordered custom, and lavender cannot:
+    // that gap is the fixture's job, because it is the real catalog state the
+    // custom page has to survive (CJ builds the custom SKUs one at a time) and
+    // the only way the "leave it off the picker" branch gets exercised.
     variants: [
-      { label: 'Rose', squareVariationId: FIXTURE_VARIATIONS.flowerRose },
-      { label: 'Tulip', squareVariationId: FIXTURE_VARIATIONS.flowerTulip },
-      { label: 'Lavender', squareVariationId: FIXTURE_VARIATIONS.flowerLavender },
+      {
+        _key: 'variant-rose',
+        label: 'Rose',
+        squareVariationId: FIXTURE_VARIATIONS.flowerRose,
+        customSquareVariationId: FIXTURE_VARIATIONS.customFlowerRose,
+      },
+      {
+        _key: 'variant-tulip',
+        label: 'Tulip',
+        squareVariationId: FIXTURE_VARIATIONS.flowerTulip,
+        customSquareVariationId: FIXTURE_VARIATIONS.customFlowerTulip,
+      },
+      {
+        _key: 'variant-lavender',
+        label: 'Lavender',
+        squareVariationId: FIXTURE_VARIATIONS.flowerLavender,
+      },
     ],
     displayOrder: 2,
     featured: false,

@@ -227,6 +227,24 @@ describe('SANITY_FAKE — flag on', () => {
     expect(flowers?.squareVariationId ?? '').toBe('');
   });
 
+  it('offers custom ids on some flower styles and not on others', () => {
+    // Both halves matter to the custom page: the styles with an id are the
+    // picker, and the style without one is the branch that leaves it off.
+    const variants = sanityFixtures.product('crochet-flowers')?.variants ?? [];
+    const withCustom = variants.filter((variant) => Boolean(variant.customSquareVariationId));
+
+    expect(withCustom.length).toBeGreaterThan(0);
+    expect(withCustom.length).toBeLessThan(variants.length);
+  });
+
+  it('keeps a product whose custom order is the whole product, not a style', () => {
+    // The other branch of the same page: no styles at all, one top-level id.
+    const hat = sanityFixtures.product('crochet-ruffled-bucket-hat');
+
+    expect(hat?.customSquareVariationId).toBeTruthy();
+    expect(hat?.variants ?? []).toHaveLength(0);
+  });
+
   it('orders products by displayOrder and posts newest first', () => {
     const hats = sanityFixtures.products('hats');
     expect(hats.map((product) => product.displayOrder)).toEqual(
@@ -288,7 +306,10 @@ describe('the two fixture sets agree', () => {
     const ids = products.flatMap((product) => [
       ...(product.squareVariationId ? [product.squareVariationId] : []),
       ...(product.customSquareVariationId ? [product.customSquareVariationId] : []),
-      ...(product.variants ?? []).map((variant) => variant.squareVariationId),
+      ...(product.variants ?? []).flatMap((variant) => [
+        variant.squareVariationId,
+        ...(variant.customSquareVariationId ? [variant.customSquareVariationId] : []),
+      ]),
     ]);
     expect(ids.length).toBeGreaterThan(0);
 

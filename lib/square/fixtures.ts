@@ -72,6 +72,11 @@ const CATALOG: FixtureVariation[] = [
   { id: FIXTURE_VARIATIONS.flowerRose, priceCents: 900, trackInventory: true, onHand: 12 },
   { id: FIXTURE_VARIATIONS.flowerTulip, priceCents: 900, trackInventory: true, onHand: 8 },
   { id: FIXTURE_VARIATIONS.flowerLavender, priceCents: 900, trackInventory: true, onHand: 5 },
+  // Made-to-order like the custom hat above, and priced alike per style — the
+  // custom page shows one number for a piece, so a rose that cost more than a
+  // tulip would make the card price a lie.
+  { id: FIXTURE_VARIATIONS.customFlowerRose, priceCents: 800, trackInventory: false, onHand: 0 },
+  { id: FIXTURE_VARIATIONS.customFlowerTulip, priceCents: 800, trackInventory: false, onHand: 0 },
 ];
 
 const BY_ID = new Map(CATALOG.map((variation) => [variation.id, variation]));
