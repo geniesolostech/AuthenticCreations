@@ -134,17 +134,24 @@ describe('HeaderNav', () => {
   });
 
   test('every link reserves the strand slot, so the row is one height on every page', () => {
-    // The mechanism, not the pixels: the slot is a fixed-height flow root
-    // present on all six links whether or not it holds a strand, so neither
-    // the row's height nor the other links' positions can depend on which page
-    // is open. `flow-root` is half of that — under a plain `block` the strand's
-    // own marginTop collapses out of the reserved height and the active link
-    // grows by 2px (measured in Chromium; see components/header-nav.tsx).
+    // The mechanism, not the pixels. Height: every link carries pb-2 whether or
+    // not it holds a strand, so neither the row's height nor the other links'
+    // positions can depend on which page is open. Width: the slot is
+    // absolutely positioned — in flow, a flex-item link sizes to the
+    // max-content of its children, and the strand SVG's intrinsic width is
+    // wider than a short word ("Hats" grew a strand overshooting its text on
+    // desktop). Out of flow with inset-x-0, the strand is exactly as wide as
+    // the text that sizes the link.
     const matched = renderAt('/about');
+    const matchedLinks = screen.getAllByRole('link');
+    expect(matchedLinks).toHaveLength(6);
+    for (const link of matchedLinks) {
+      expect(link).toHaveClass('relative', 'pb-2');
+    }
     const matchedSlots = strandSlots();
     expect(matchedSlots).toHaveLength(6);
     for (const slot of matchedSlots) {
-      expect(slot).toHaveClass('flow-root', 'h-2');
+      expect(slot).toHaveClass('absolute', 'inset-x-0', 'bottom-0', 'h-1.5');
       expect(slot).toHaveAttribute('aria-hidden', 'true');
     }
     matched.unmount();
@@ -153,7 +160,7 @@ describe('HeaderNav', () => {
     const unmatchedSlots = strandSlots();
     expect(unmatchedSlots).toHaveLength(6);
     for (const slot of unmatchedSlots) {
-      expect(slot).toHaveClass('flow-root', 'h-2');
+      expect(slot).toHaveClass('absolute', 'inset-x-0', 'bottom-0', 'h-1.5');
       expect(slot.children).toHaveLength(0);
     }
     unmatched.unmount();

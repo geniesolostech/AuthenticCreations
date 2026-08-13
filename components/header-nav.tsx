@@ -91,32 +91,29 @@ export default function HeaderNav() {
             href={href}
             ref={active ? activeLink : undefined}
             aria-current={active ? 'page' : undefined}
-            className="hover:text-rust"
+            className="relative pb-2 hover:text-rust"
           >
             {name}
             {/* The strand's footprint is reserved on EVERY link, filled only
                 on the active one: the row has to be exactly as tall on a page
                 that matches nothing (/cart, /thanks) as on one that matches,
                 and the other links must not move when the active one changes.
-                h-2 is that footprint — the 6px strand plus the 2px marginTop
-                YarnUnderline sets on itself.
+                pb-2 on the link is that footprint — 8px for the 6px strand
+                plus a 2px breath above it.
 
-                `flow-root`, not `block`, and that is load-bearing: a plain
-                block box has no top border or padding, so the strand's 2px
-                marginTop collapses straight through it and lands outside the
-                reserved height. Measured on a Pixel 5, that made the active
-                link 2px taller than its neighbours — a header 2px taller on
-                /blog than on /cart, and every other link nudged 1px by the
-                row's `items-center`. A flow root keeps the margin inside.
-
-                Each link is a flex item, so it is blockified and
-                shrink-to-fit: the strand spans the link's own text width, not
-                the row's. h-1.5 overrides the component's height attribute (it
-                was sized for heading rows; 10px of wave under a 16px word is a
-                banner, not an underline) — the stroke and its geometry are
-                untouched. */}
-            <span aria-hidden="true" className="flow-root h-2">
-              {active ? <YarnUnderline color={color} className="h-1.5" /> : null}
+                The strand is absolutely positioned, and that is load-bearing
+                for its WIDTH: each link is a flex item, and flex items size to
+                the max-content of everything in flow — which for the strand's
+                SVG (width="100%", so its viewBox-derived intrinsic width) is
+                wider than a short word. In flow, "Hats" got a link as wide as
+                the SVG's intrinsic size and a strand overshooting the text.
+                Out of flow, the link is sized by its text alone and
+                inset-x-0 makes the strand exactly that wide. h-1.5 overrides
+                the component's heading-row height (10px of wave under a 16px
+                word is a banner, not an underline) — the stroke and its
+                geometry are untouched. */}
+            <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1.5">
+              {active ? <YarnUnderline color={color} className="h-1.5 w-full" /> : null}
             </span>
           </Link>
         );
