@@ -23,12 +23,46 @@ test('header nav reads at a comfortable size, without becoming a redesign', () =
   expect(wordmark).not.toHaveClass('text-xl');
 
   const nav = screen.getByRole('navigation', { name: 'Main' });
-  expect(nav).toHaveClass('text-lg', 'font-semibold');
+  expect(nav).toHaveClass('sm:text-lg', 'font-semibold');
   expect(nav).not.toHaveClass('text-sm');
 
-  // The parts that must not move: links still wrap, and still go rust on hover.
-  expect(nav).toHaveClass('flex-wrap');
+  // The parts that must not move: links still wrap at sm: and up, and still go
+  // rust on hover.
+  expect(nav).toHaveClass('sm:flex-wrap');
   expect(screen.getByRole('link', { name: 'Hats' })).toHaveClass('hover:text-rust');
+});
+
+test('header nav is one sliding row on phones, unchanged at sm: and up', () => {
+  render(<SiteHeader />);
+
+  const nav = screen.getByRole('navigation', { name: 'Main' });
+
+  // Phones: one non-wrapping line that pans sideways, scrollbar hidden but
+  // scrolling (and focus-driven scrolling) intact.
+  expect(nav).toHaveClass('flex-nowrap', 'whitespace-nowrap', 'overflow-x-auto');
+  expect(nav).toHaveClass('[scrollbar-width:none]', '[&::-webkit-scrollbar]:hidden');
+  expect(nav).not.toHaveClass('overflow-hidden');
+
+  // ...on its own row, so the wordmark and the cart trigger keep row one.
+  expect(nav).toHaveClass('order-last', 'w-full');
+
+  // Every mobile-only utility above has an sm: reset, or desktop changes.
+  expect(nav).toHaveClass('sm:order-none', 'sm:w-auto', 'sm:flex-wrap', 'sm:overflow-visible');
+});
+
+test('header pins to the top on phones only, under the mini-cart overlay', () => {
+  const { container } = render(<SiteHeader />);
+
+  const header = container.querySelector('header');
+  expect(header).toHaveClass('sticky', 'top-0', 'bg-cream');
+
+  // Separation from the cream page behind it while pinned, dropped once the
+  // header goes static again.
+  expect(header).toHaveClass('shadow-card', 'sm:static', 'sm:shadow-none');
+
+  // Must stay below the mini-cart overlay (z-40) and panel (z-50) so the
+  // drawer covers the header.
+  expect(header).toHaveClass('z-30');
 });
 
 test('footer shows tagline and policies link', () => {
