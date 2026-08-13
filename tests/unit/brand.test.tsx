@@ -19,8 +19,7 @@ test('header nav reads at a comfortable size, without becoming a redesign', () =
   render(<SiteHeader />);
 
   const wordmark = screen.getByRole('link', { name: /authentic creations/i });
-  expect(wordmark).toHaveClass('text-2xl', 'sm:text-3xl');
-  expect(wordmark).not.toHaveClass('text-xl');
+  expect(wordmark).toHaveClass('sm:text-3xl');
 
   const nav = screen.getByRole('navigation', { name: 'Main' });
   expect(nav).toHaveClass('sm:text-lg', 'font-semibold');
@@ -48,6 +47,28 @@ test('header nav is one sliding row on phones, unchanged at sm: and up', () => {
 
   // Every mobile-only utility above has an sm: reset, or desktop changes.
   expect(nav).toHaveClass('sm:order-none', 'sm:w-auto', 'sm:flex-wrap', 'sm:overflow-visible');
+});
+
+test('header block is tighter on phones, pixel-identical at sm: and up', () => {
+  const { container } = render(<SiteHeader />);
+
+  // The owner's complaint was height on a phone, so every shrink here is
+  // mobile-only and carries an sm: reset back to what desktop already had
+  // (py-6, the old gap-5, text-3xl).
+  const wordmark = screen.getByRole('link', { name: /authentic creations/i });
+  expect(wordmark).toHaveClass('text-xl', 'sm:text-3xl');
+  expect(wordmark).not.toHaveClass('text-2xl');
+
+  const row = container.querySelector('header > div');
+  expect(row).toHaveClass('py-3', 'sm:py-6');
+  expect(row).toHaveClass('gap-3', 'sm:gap-5');
+  expect(row).not.toHaveClass('py-5');
+  expect(row).not.toHaveClass('gap-5');
+
+  // Not part of the tightening: the nav's own reading size is unchanged, and
+  // the room the active-link strand needs is what the reclaimed padding pays
+  // for (see components/header-nav.tsx).
+  expect(screen.getByRole('navigation', { name: 'Main' })).toHaveClass('text-base', 'sm:text-lg');
 });
 
 test('header pins to the top on phones only, under the mini-cart overlay', () => {
