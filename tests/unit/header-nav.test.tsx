@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 
 // `usePathname` reads a context only the App Router provides, so outside a
 // running app it answers null and nothing is ever current. This stands in for
@@ -9,15 +9,26 @@ vi.mock('next/navigation', () => ({ usePathname: () => router.pathname }));
 
 import HeaderNav, { isNavLinkActive } from '@/components/header-nav';
 
-// jsdom implements no scrolling at all — `scrollIntoView` is simply absent, so
-// the mount-time call would throw rather than do nothing.
-const scrollIntoView = vi.fn();
-beforeAll(() => {
-  Element.prototype.scrollIntoView = scrollIntoView;
-});
+// jsdom implements no layout — every getBoundingClientRect answers zeros, so
+// the mount-time scroll effect sees nothing off-screen and does nothing. The
+// scrolling tests below stub the rects to describe the geometry they need.
 afterEach(() => {
-  scrollIntoView.mockClear();
+  vi.restoreAllMocks();
 });
+
+function rect(left: number, right: number): DOMRect {
+  return {
+    left,
+    right,
+    top: 0,
+    bottom: 0,
+    x: left,
+    y: 0,
+    width: right - left,
+    height: 0,
+    toJSON: () => ({}),
+  } as DOMRect;
+}
 
 function renderAt(pathname: string) {
   router.pathname = pathname;
@@ -151,7 +162,10 @@ describe('HeaderNav', () => {
     const matchedSlots = strandSlots();
     expect(matchedSlots).toHaveLength(6);
     for (const slot of matchedSlots) {
-      expect(slot).toHaveClass('absolute', 'inset-x-0', 'bottom-0', 'h-1.5');
+      // h-2, not the strand's h-1.5: the SVG's own 2px marginTop has to fit
+      // INSIDE the slot, or it becomes vertical scrollable overflow in the
+      // mobile nav and the strand's lower half hides under the row edge.
+      expect(slot).toHaveClass('absolute', 'inset-x-0', 'bottom-0', 'h-2');
       expect(slot).toHaveAttribute('aria-hidden', 'true');
     }
     matched.unmount();
@@ -160,7 +174,7 @@ describe('HeaderNav', () => {
     const unmatchedSlots = strandSlots();
     expect(unmatchedSlots).toHaveLength(6);
     for (const slot of unmatchedSlots) {
-      expect(slot).toHaveClass('absolute', 'inset-x-0', 'bottom-0', 'h-1.5');
+      expect(slot).toHaveClass('absolute', 'inset-x-0', 'bottom-0', 'h-2');
       expect(slot.children).toHaveLength(0);
     }
     unmatched.unmount();
@@ -173,20 +187,40 @@ describe('HeaderNav', () => {
     expect(screen.getByTestId('yarn-underline')).toHaveClass('h-1.5');
   });
 
-  test('scrolls the active link into view on mount, without animating or moving the page', () => {
+  test('slides the row sideways to an off-screen active link, and only sideways', () => {
+    // The nav is a scroll container on BOTH axes on phones (overflow-x forces
+    // overflow-y), and scrollIntoView once nudged it vertically, hiding the
+    // strand's bottom under the row edge. The effect therefore writes
+    // scrollLeft by hand: Community sits 120px past the right edge here, so
+    // the row slides exactly that far and the vertical axis is never written.
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: Element,
+    ) {
+      if (this.tagName === 'NAV') return rect(0, 200);
+      if (this.textContent === 'Community') return rect(250, 320);
+      return rect(0, 100);
+    });
     renderAt('/community');
 
-    expect(scrollIntoView).toHaveBeenCalledTimes(1);
-    expect(scrollIntoView).toHaveBeenCalledWith({
-      block: 'nearest',
-      inline: 'nearest',
-      behavior: 'instant',
+    const nav = screen.getByRole('navigation');
+    expect(nav.scrollLeft).toBe(120);
+    expect(nav.scrollTop).toBe(0);
+  });
+
+  test('does not move the row when the active link is already visible', () => {
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: Element,
+    ) {
+      if (this.tagName === 'NAV') return rect(0, 400);
+      return rect(10, 60);
     });
-    expect(scrollIntoView.mock.contexts[0]).toBe(screen.getByRole('link', { name: 'Community' }));
+    renderAt('/');
+
+    expect(screen.getByRole('navigation').scrollLeft).toBe(0);
   });
 
   test('nothing to scroll to when no link is active', () => {
     renderAt('/cart');
-    expect(scrollIntoView).not.toHaveBeenCalled();
+    expect(screen.getByRole('navigation').scrollLeft).toBe(0);
   });
 });

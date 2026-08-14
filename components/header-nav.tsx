@@ -65,11 +65,24 @@ export default function HeaderNav() {
   const activeLink = useRef<HTMLAnchorElement | null>(null);
 
   // The mobile row slides sideways, so the active link can start off-screen —
-  // on /community it is the last of six. `inline: 'nearest'` is a no-op when
-  // it is already visible, and 'instant' keeps the row from visibly sliding
-  // after paint. `block: 'nearest'` so this can never scroll the page itself.
+  // on /community it is the last of six. Scrolled by hand, horizontally ONLY:
+  // `overflow-x-auto` forces the nav's overflow-y to compute to auto as well,
+  // so the nav is also a (barely) vertical scroller, and scrollIntoView with
+  // `block: 'nearest'` once nudged it 2px down — hiding the strand's bottom
+  // under the row's edge on phones, permanently, until a swipe dragged it
+  // back. Writing scrollLeft alone cannot move the other axis. No-op when the
+  // link is already fully visible.
   useEffect(() => {
-    activeLink.current?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+    const link = activeLink.current;
+    const nav = link?.parentElement;
+    if (!link || !(nav instanceof HTMLElement)) return;
+    const navRect = nav.getBoundingClientRect();
+    const linkRect = link.getBoundingClientRect();
+    if (linkRect.left < navRect.left) {
+      nav.scrollLeft += linkRect.left - navRect.left;
+    } else if (linkRect.right > navRect.right) {
+      nav.scrollLeft += linkRect.right - navRect.right;
+    }
   }, [pathname]);
 
   return (
@@ -111,8 +124,16 @@ export default function HeaderNav() {
                 inset-x-0 makes the strand exactly that wide. h-1.5 overrides
                 the component's heading-row height (10px of wave under a 16px
                 word is a banner, not an underline) — the stroke and its
-                geometry are untouched. */}
-            <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1.5">
+                geometry are untouched.
+
+                The slot is h-2, not h-1.5, and that is load-bearing on
+                phones: YarnUnderline sets marginTop: 2px on itself, so inside
+                a 6px slot the 6px strand pokes 2px past the bottom — which in
+                the mobile nav (a scroll container on BOTH axes; overflow-x
+                forces overflow-y) becomes 2px of vertical scrollable overflow
+                that hid the strand's lower half once anything scrolled it.
+                At 8px, margin plus strand fit exactly and nothing overflows. */}
+            <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-2">
               {active ? <YarnUnderline color={color} className="h-1.5 w-full" /> : null}
             </span>
           </Link>
